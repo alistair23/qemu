@@ -25,6 +25,8 @@
 
 #include "hw/sysbus.h"
 
+#define DEBUG_NETGPIO
+
 #ifdef DEBUG_NETGPIO
 #define DPRINTF(fmt, ...) \
 do { printf("netduino_gpio: " fmt , ## __VA_ARGS__); } while (0)
@@ -107,26 +109,22 @@ static void netduino_gpio_update(NETDUINO_GPIOState *s)
     uint8_t out;
     int i;
 
-    /* Outputs float high.  */
-    /* FIXME: This is board dependent.  */
     out = (s->data & s->dir) | ~s->dir;
     changed = s->old_data ^ out;
     if (!changed)
         return;
 
-fprintf(stderr, "Update\n");
+    DPRINTF("Update\n");
 
     s->old_data = out;
     for (i = 0; i < 8; i++) {
         mask = 1 << i;
         if (changed & mask) {
-            fprintf(stderr, "Set output %d = %d\n", i, (out & mask) != 0);
+            DPRINTF("Set output %d = %d\n", i, (out & mask) != 0);
             DPRINTF("Set output %d = %d\n", i, (out & mask) != 0);
             qemu_set_irq(s->out[i], (out & mask) != 0);
         }
     }
-
-    /* FIXME: Implement input interrupts.  */
 }
 
 static uint64_t netduino_gpio_read(void *opaque, hwaddr offset,
@@ -134,140 +132,27 @@ static uint64_t netduino_gpio_read(void *opaque, hwaddr offset,
 {
     NETDUINO_GPIOState *s = (NETDUINO_GPIOState *)opaque;
 
-    fprintf(stderr, "Read %d\n", s->data);
+    DPRINTF("Read 0x%x, 0x%x\n", s->data, (uint) offset);
 
-    return s->data;
-
-    if (offset >= 0xfd0 && offset < 0x1000) {
-        return s->id[(offset - 0xfd0) >> 2];
-    }
     if (offset < 0x400) {
-        return s->data & (offset >> 2);
+        return s->data;
     }
-    switch (offset) {
-    case 0x400: /* Direction */
-        return s->dir;
-    case 0x404: /* Interrupt sense */
-        return s->isense;
-    case 0x408: /* Interrupt both edges */
-        return s->ibe;
-    case 0x40c: /* Interrupt event */
-        return s->iev;
-    case 0x410: /* Interrupt mask */
-        return s->im;
-    case 0x414: /* Raw interrupt status */
-        return s->istate;
-    case 0x418: /* Masked interrupt status */
-        return s->istate | s->im;
-    case 0x420: /* Alternate function select */
-        return s->afsel;
-    case 0x500: /* 2mA drive */
-        return s->dr2r;
-    case 0x504: /* 4mA drive */
-        return s->dr4r;
-    case 0x508: /* 8mA drive */
-        return s->dr8r;
-    case 0x50c: /* Open drain */
-        return s->odr;
-    case 0x510: /* Pull-up */
-        return s->pur;
-    case 0x514: /* Pull-down */
-        return s->pdr;
-    case 0x518: /* Slew rate control */
-        return s->slr;
-    case 0x51c: /* Digital enable */
-        return s->den;
-    case 0x520: /* Lock */
-        return s->locked;
-    case 0x524: /* Commit */
-        return s->cr;
-    case 0x528: /* Analog mode select */
-        return s->amsel;
-    default:
-        qemu_log_mask(LOG_GUEST_ERROR,
-                      "netduino_gpio_read: Bad offset %x\n", (int)offset);
-        return 0;
-    }
+    return 0;
 }
 
 static void netduino_gpio_write(void *opaque, hwaddr offset,
                         uint64_t value, unsigned size)
 {
     NETDUINO_GPIOState *s = (NETDUINO_GPIOState *)opaque;
-    uint8_t mask;
 
-    fprintf(stderr, "Data: %d\n", s->data);
-    s->data = value;
+    DPRINTF("Write 0x%x, 0x%x\n", (uint) value, (uint) offset);
 
-    if (offset < 0x400) {
-        mask = (offset >> 2) & s->dir;
-        //fprintf(stderr, "Write %x, %x\n", value, offset);
-        s->data = (s->data & ~mask) | (value & mask);
+    if (offset < 0x40) {
+        s->data = value;
         netduino_gpio_update(s);
         return;
     }
-    switch (offset) {
-    case 0x400: /* Direction */
-        s->dir = value & 0xff;
-        break;
-    case 0x404: /* Interrupt sense */
-        s->isense = value & 0xff;
-        break;
-    case 0x408: /* Interrupt both edges */
-        s->ibe = value & 0xff;
-        break;
-    case 0x40c: /* Interrupt event */
-        s->iev = value & 0xff;
-        break;
-    case 0x410: /* Interrupt mask */
-        s->im = value & 0xff;
-        break;
-    case 0x41c: /* Interrupt clear */
-        s->istate &= ~value;
-        break;
-    case 0x420: /* Alternate function select */
-        mask = s->cr;
-        s->afsel = (s->afsel & ~mask) | (value & mask);
-        break;
-    case 0x500: /* 2mA drive */
-        s->dr2r = value & 0xff;
-        break;
-    case 0x504: /* 4mA drive */
-        s->dr4r = value & 0xff;
-        break;
-    case 0x508: /* 8mA drive */
-        s->dr8r = value & 0xff;
-        break;
-    case 0x50c: /* Open drain */
-        s->odr = value & 0xff;
-        break;
-    case 0x510: /* Pull-up */
-        s->pur = value & 0xff;
-        break;
-    case 0x514: /* Pull-down */
-        s->pdr = value & 0xff;
-        break;
-    case 0x518: /* Slew rate control */
-        s->slr = value & 0xff;
-        break;
-    case 0x51c: /* Digital enable */
-        s->den = value & 0xff;
-        break;
-    case 0x520: /* Lock */
-        s->locked = (value != 0xacce551);
-        break;
-    case 0x524: /* Commit */
-        if (!s->locked)
-            s->cr = value & 0xff;
-        break;
-    case 0x528:
-        s->amsel = value & 0xff;
-        break;
-    default:
-        qemu_log_mask(LOG_GUEST_ERROR,
-                      "netduino_gpio_write: Bad offset %x\n", (int)offset);
-    }
-    netduino_gpio_update(s);
+    return;
 }
 
 static void netduino_gpio_reset(NETDUINO_GPIOState *s)

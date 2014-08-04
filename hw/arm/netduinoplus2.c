@@ -44,23 +44,27 @@ static void armv7m_reset(void *opaque)
 
 static void netduinoplus2_init(MachineState *machine)
 {
+    static const uint32_t gpio_addr[9] =
+      { 0x40020000, 0x40020400, 0x40020800, 0x40020C00, 0x40021000,
+        0x40021400, 0x40021800, 0x40021C00, 0x40022000};
     const char *kernel_filename = machine->kernel_filename;
+
     MemoryRegion *address_space_mem = get_system_memory();
     MemoryRegion *sram = g_new(MemoryRegion, 1);
     MemoryRegion *flash = g_new(MemoryRegion, 1);
     DeviceState *gpio_dev[9];
-    static const uint32_t gpio_addr[9] =
-      { 0x40020000, 0x40020400, 0x40020800, 0x40020C00, 0x40021000,
-        0x40021400, 0x40021800, 0x40021C00, 0x40022000};
 
+    qemu_irq gpio_in[7][8];
+    qemu_irq gpio_out[7][8];
     qemu_irq pic[64];
     ARMCPU *cpu;
     CPUARMState *env;
     DeviceState *nvic;
+
     int image_size;
     uint64_t entry;
     uint64_t lowaddr;
-    int i;
+    int i, j;
     int big_endian = 0;
 
     /* The Netduinio Plus 2 uses a Cortex-M4, while QEMU currently supports
@@ -114,10 +118,10 @@ static void netduinoplus2_init(MachineState *machine)
     for (i = 0; i < 9; i++) {
         gpio_dev[i] = sysbus_create_simple("netduino_gpio", gpio_addr[i],
                                            pic[i]);
-        //for (j = 0; j < 8; j++) {
-        //    gpio_in[i][j] = qdev_get_gpio_in(gpio_dev[i], j);
-        //    gpio_out[i][j] = NULL;
-        //}
+        for (j = 0; j < 8; j++) {
+            gpio_in[i][j] = qdev_get_gpio_in(gpio_dev[i], j);
+            gpio_out[i][j] = NULL;
+        }
     }
 }
 
