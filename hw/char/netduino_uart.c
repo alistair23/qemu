@@ -23,6 +23,7 @@
  */
 
 #include "hw/sysbus.h"
+#include "sysemu/char.h"
 #include "hw/hw.h"
 #include "net/net.h"
 
@@ -37,13 +38,21 @@ struct net_uart {
     qemu_irq irq;
     NICState *nic;
     NICConf conf;
+    CharDriverState *chr;
 };
 
 static uint64_t netduino_uart_read(void *opaque, hwaddr addr, unsigned int size)
 {
     /* struct net_uart *s = opaque; */
 
-    /* FIXME: Actually do */
+    switch (addr) {
+        case 0x0: /* USART_FLAG_TC */
+            return 0x0040;
+        default:
+            qemu_log_mask(LOG_GUEST_ERROR,
+                          "net_uart_read: Bad offset %x\n", (int)addr);
+            return 0;
+    }
 
     return 0;
 }
@@ -51,15 +60,21 @@ static uint64_t netduino_uart_read(void *opaque, hwaddr addr, unsigned int size)
 static void netduino_uart_write(void *opaque, hwaddr addr,
                        uint64_t val64, unsigned int size)
 {
-    /* struct net_uart *s = opaque; */
+    struct net_uart *s = opaque;
     uint32_t value = (uint32_t) val64;
+    unsigned char ch;
 
-    if (value == 0xFFBF) {
-        /* FIXME: Remove this */
-    	return;
+    switch (addr) {
+        case 0x0:
+            return;
+        case 0x4:
+            ch = value;
+            qemu_chr_fe_write(s->chr, &ch, 1);
+            return;
+        default:
+            qemu_log_mask(LOG_GUEST_ERROR,
+                          "net_uart_write: Bad offset %x\n", (int)addr);
     }
-
-    fprintf(stderr, "%c", (char) value);
 }
 
 static const MemoryRegionOps netduino_uart_ops = {
@@ -76,6 +91,8 @@ static int netduino_uart_init(SysBusDevice *sbd)
 {
     DeviceState *dev = DEVICE(sbd);
     struct net_uart *s = NETDUINO_UART(dev);
+
+    s->chr = qemu_char_get_next_serial();
 
     sysbus_init_irq(sbd, &s->irq);
 
