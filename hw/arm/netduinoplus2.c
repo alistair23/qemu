@@ -107,8 +107,8 @@ static void netduinoplus2_init(MachineState *machine)
     qemu_register_reset(armv7m_reset, cpu);
 
     /* Attach a sample UART controller */
-    /* sysbus_create_simple("test_uart", 0x40004C00,
-                         pic[52]); */
+    sysbus_create_simple("netduino_uart", 0x40004C00,
+                         pic[52]);
 
     /* Attach GPIO devices */
     /* for (i = 0; i < 9; i++) {
