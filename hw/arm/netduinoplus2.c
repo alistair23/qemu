@@ -111,14 +111,14 @@ static void netduinoplus2_init(MachineState *machine)
                          pic[52]);
 
     /* Attach GPIO devices */
-    /* for (i = 0; i < 9; i++) {
-        gpio_dev[i] = sysbus_create_simple("pl061", gpio_addr[i],
+    for (i = 0; i < 9; i++) {
+        gpio_dev[i] = sysbus_create_simple("netduino_gpio", gpio_addr[i],
                                            pic[i]);
         //for (j = 0; j < 8; j++) {
         //    gpio_in[i][j] = qdev_get_gpio_in(gpio_dev[i], j);
         //    gpio_out[i][j] = NULL;
         //}
-    } */
+    }
 }
 
 static QEMUMachine netduinoplus2_machine = {
