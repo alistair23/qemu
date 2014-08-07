@@ -59,6 +59,7 @@ static void netduinoplus2_init(MachineState *machine)
     MemoryRegion *address_space_mem = get_system_memory();
     MemoryRegion *sram = g_new(MemoryRegion, 1);
     MemoryRegion *flash = g_new(MemoryRegion, 1);
+    MemoryRegion *hack = g_new(MemoryRegion, 1);
     ARMV7MResetArgs reset_args;
     DeviceState *gpio_dev[9];
 
@@ -83,7 +84,7 @@ static void netduinoplus2_init(MachineState *machine)
     memory_region_init_ram(flash, NULL, "netduino.flash", 1024 * 1024);
     vmstate_register_ram_global(flash);
     memory_region_set_readonly(flash, true);
-    memory_region_add_subregion(address_space_mem, 0x00000000, flash);
+    memory_region_add_subregion(address_space_mem, 0x08000000, flash);
 
     memory_region_init_ram(sram, NULL, "netduino.sram", 192 * 1024);
     vmstate_register_ram_global(sram);
@@ -129,6 +130,11 @@ static void netduinoplus2_init(MachineState *machine)
             gpio_out[i][j] = NULL;
         }
     }
+
+    memory_region_init_ram(hack, NULL, "netduino.hack", 0x08000000 - 1);
+    vmstate_register_ram_global(hack);
+    memory_region_set_readonly(hack, true);
+    memory_region_add_subregion(address_space_mem, 0xfffff000, hack);
 
     reset_args = (ARMV7MResetArgs) {
         .cpu = cpu,

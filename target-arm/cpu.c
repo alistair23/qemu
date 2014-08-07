@@ -145,7 +145,7 @@ static void arm_cpu_reset(CPUState *s)
         uint8_t *rom;
 
         env->daif &= ~PSTATE_I;
-        rom = rom_ptr(0);
+        rom = rom_ptr(0x08000000);
         if (rom) {
             /* Address zero is covered by ROM which hasn't yet been
              * copied into physical memory.
