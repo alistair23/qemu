@@ -27,6 +27,15 @@
 #include "hw/hw.h"
 #include "net/net.h"
 
+//#define DEBUG_NETUART
+
+#ifdef DEBUG_NETUART
+#define DPRINTF(fmt, ...) \
+do { printf("netduino_uart: " fmt , ## __VA_ARGS__); } while (0)
+#else
+#define DPRINTF(fmt, ...) do {} while(0)
+#endif
+
 #define TYPE_NETDUINO_UART "netduino_uart"
 #define NETDUINO_UART(obj) \
     OBJECT_CHECK(struct net_uart, (obj), TYPE_NETDUINO_UART)
@@ -44,6 +53,8 @@ struct net_uart {
 static uint64_t netduino_uart_read(void *opaque, hwaddr addr, unsigned int size)
 {
     /* struct net_uart *s = opaque; */
+
+    DPRINTF("Read 0x%x\n", (uint) addr);
 
     switch (addr) {
         case 0x0: /* USART_FLAG_TC */
@@ -63,6 +74,8 @@ static void netduino_uart_write(void *opaque, hwaddr addr,
     struct net_uart *s = opaque;
     uint32_t value = (uint32_t) val64;
     unsigned char ch;
+
+    DPRINTF("Write 0x%x, 0x%x\n", value, (uint) addr);
 
     switch (addr) {
         case 0x0:
