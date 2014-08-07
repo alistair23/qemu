@@ -124,7 +124,7 @@ static void netduinoplus2_init(MachineState *machine)
     /* Attach GPIO devices */
     for (i = 0; i < 9; i++) {
         gpio_dev[i] = sysbus_create_simple("netduino_gpio", gpio_addr[i],
-                                           pic[i]);
+                                           pic[23 + i - 2]);
         for (j = 0; j < 8; j++) {
             gpio_in[i][j] = qdev_get_gpio_in(gpio_dev[i], j);
             gpio_out[i][j] = NULL;

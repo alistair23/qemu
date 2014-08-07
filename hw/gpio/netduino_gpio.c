@@ -25,7 +25,7 @@
 
 #include "hw/sysbus.h"
 
-#define DEBUG_NETGPIO
+//#define DEBUG_NETGPIO
 
 #ifdef DEBUG_NETGPIO
 #define DPRINTF(fmt, ...) \
@@ -36,8 +36,6 @@ do { printf("netduino_gpio: " fmt , ## __VA_ARGS__); } while (0)
 
 static const uint8_t netduino_gpio_id[12] =
   { 0x00, 0x00, 0x00, 0x00, 0x61, 0x10, 0x04, 0x00, 0x0d, 0xf0, 0x05, 0xb1 };
-static const uint8_t netduino_gpio_id_luminary[12] =
-  { 0x00, 0x00, 0x00, 0x00, 0x61, 0x00, 0x18, 0x01, 0x0d, 0xf0, 0x05, 0xb1 };
 
 #define TYPE_NETDUINO_GPIO "netduino_gpio"
 #define NETDUINO_GPIO(obj) OBJECT_CHECK(NETDUINO_GPIOState, (obj), TYPE_NETDUINO_GPIO)
@@ -145,7 +143,7 @@ static void netduino_gpio_write(void *opaque, hwaddr offset,
 {
     NETDUINO_GPIOState *s = (NETDUINO_GPIOState *)opaque;
 
-    DPRINTF("Write 0x%x, 0x%x\n", (uint) value, (uint) offset);
+    DPRINTF("Write 0x%x, 0x%x, 0x%x\n", (uint) value, (uint) offset, (uint) s->data);
 
     if (offset < 0x40) {
         s->data = value;
@@ -153,12 +151,6 @@ static void netduino_gpio_write(void *opaque, hwaddr offset,
         return;
     }
     return;
-}
-
-static void netduino_gpio_reset(NETDUINO_GPIOState *s)
-{
-    s->locked = 1;
-    s->cr = 0xff;
 }
 
 static void netduino_gpio_set_irq(void * opaque, int irq, int level)
@@ -186,12 +178,11 @@ static int netduino_gpio_initfn(SysBusDevice *sbd)
     DeviceState *dev = DEVICE(sbd);
     NETDUINO_GPIOState *s = NETDUINO_GPIO(dev);
 
-    memory_region_init_io(&s->iomem, OBJECT(s), &netduino_gpio_ops, s, "netduino_gpio", 0x1000);
+    memory_region_init_io(&s->iomem, OBJECT(s), &netduino_gpio_ops, s, "netduino_gpio", 0x2000);
     sysbus_init_mmio(sbd, &s->iomem);
     sysbus_init_irq(sbd, &s->irq);
     qdev_init_gpio_in(dev, netduino_gpio_set_irq, 8);
     qdev_init_gpio_out(dev, s->out, 8);
-    netduino_gpio_reset(s);
     return 0;
 }
 
