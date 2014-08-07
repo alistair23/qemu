@@ -131,6 +131,17 @@ static uint64_t netduino_gpio_read(void *opaque, hwaddr offset,
     NETDUINO_GPIOState *s = (NETDUINO_GPIOState *)opaque;
 
     DPRINTF("Read 0x%x, 0x%x\n", s->data, (uint) offset);
+    //int i;
+/*    for (i = 0; i < 8; i++) {
+        qemu_set_irq(s->out[i], 0);
+        qemu_set_irq(s->out[i], 1);
+        qemu_set_irq(s->out[i], 0);
+    } */
+
+    qemu_set_irq(s->irq, 0);
+    qemu_set_irq(s->irq, 1);
+    qemu_set_irq(s->irq, 0);
+    netduino_gpio_update(s);
 
     if (offset < 0x400) {
         return s->data;
