@@ -35,11 +35,18 @@
 #include "qemu/error-report.h"
 #include "sysemu/qtest.h"
 
+typedef struct ARMV7MResetArgs {
+    ARMCPU *cpu;
+    uint32_t reset_pc;
+} ARMV7MResetArgs;
+
 static void armv7m_reset(void *opaque)
 {
-    ARMCPU *cpu = opaque;
+    ARMV7MResetArgs *args = opaque;
 
-    cpu_reset(CPU(cpu));
+    args->cpu->env.regs[15] = args->reset_pc;
+    args->cpu->env.thumb = args->reset_pc & 1;
+    cpu_reset(CPU(args->cpu));
 }
 
 static void netduinoplus2_init(MachineState *machine)
@@ -52,6 +59,7 @@ static void netduinoplus2_init(MachineState *machine)
     MemoryRegion *address_space_mem = get_system_memory();
     MemoryRegion *sram = g_new(MemoryRegion, 1);
     MemoryRegion *flash = g_new(MemoryRegion, 1);
+    ARMV7MResetArgs reset_args;
     DeviceState *gpio_dev[9];
 
     qemu_irq gpio_in[7][8];
@@ -108,8 +116,6 @@ static void netduinoplus2_init(MachineState *machine)
         }
     }
 
-    qemu_register_reset(armv7m_reset, cpu);
-
     /* Attach a sample UART controller */
     sysbus_create_simple("netduino_uart", 0x40004C00,
                          pic[52]);
@@ -123,6 +129,13 @@ static void netduinoplus2_init(MachineState *machine)
             gpio_out[i][j] = NULL;
         }
     }
+
+    reset_args = (ARMV7MResetArgs) {
+        .cpu = cpu,
+        .reset_pc = entry,
+    };
+    qemu_register_reset(armv7m_reset,
+                        g_memdup(&reset_args, sizeof(reset_args)));
 }
 
 static QEMUMachine netduinoplus2_machine = {
