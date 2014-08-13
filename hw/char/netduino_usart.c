@@ -27,7 +27,7 @@
 #include "hw/hw.h"
 #include "net/net.h"
 
-#define DEBUG_NETUSART
+//#define DEBUG_NETUSART
 
 #ifdef DEBUG_NETUSART
 #define DPRINTF(fmt, ...) \
@@ -93,7 +93,7 @@ static void usart_reset(DeviceState *dev)
 {
     struct net_usart *s = NETDUINO_USART(dev);
 
-    s->usart_sr = 0x00C00000; /* HACK: The 0x5F isn't the actual reset value */
+    s->usart_sr = 0x00C00000;
     s->usart_dr = 0x00000000;
     s->usart_brr = 0x00000000;
     s->usart_cr1 = 0x00000000;
@@ -107,7 +107,7 @@ static uint64_t netduino_usart_read(void *opaque, hwaddr addr, unsigned int size
     struct net_usart *s = opaque;
     uint64_t returnval;
 
-    //DPRINTF("Read 0x%x\n", (uint) addr);
+    DPRINTF("Read 0x%x\n", (uint) addr);
 
     switch (addr) {
         case 0x0:
