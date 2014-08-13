@@ -40,25 +40,66 @@ do { printf("netduino_uart: " fmt , ## __VA_ARGS__); } while (0)
 #define NETDUINO_UART(obj) \
     OBJECT_CHECK(struct net_uart, (obj), TYPE_NETDUINO_UART)
 
+#define RX_FIFO_SIZE           16
+
 struct net_uart {
     SysBusDevice parent_obj;
 
     MemoryRegion mmio;
-    qemu_irq irq;
+
+    uint8_t rx_fifo[RX_FIFO_SIZE];
+
     NICState *nic;
-    NICConf conf;
     CharDriverState *chr;
+    qemu_irq irq;
+    NICConf conf;
 };
+
+static void uart_write_rx_fifo(void *opaque, const uint8_t *buf, int size)
+{
+    struct net_uart *s = opaque;
+    int i;
+
+    DPRINTF("RX_FIFO\n");
+
+    for (i = 0; i < size; i++) {
+        DPRINTF("Buf: %c", buf[i]);
+        s->rx_fifo[i] = buf[i];
+    }
+    DPRINTF("\n");
+}
+
+static void uart_receive(void *opaque, const uint8_t *buf, int size)
+{
+    //struct net_uart *s = opaque;
+
+    uart_write_rx_fifo(opaque, buf, size);
+}
+
+static void uart_event(void *opaque, int event)
+{
+    //struct net_uart *s = opaque;
+    uint8_t buf = '\0';
+
+    if (event == CHR_EVENT_BREAK) {
+        uart_write_rx_fifo(opaque, &buf, 1);
+    }
+}
 
 static uint64_t netduino_uart_read(void *opaque, hwaddr addr, unsigned int size)
 {
-    /* struct net_uart *s = opaque; */
+    struct net_uart *s = opaque;
 
     DPRINTF("Read 0x%x\n", (uint) addr);
 
     switch (addr) {
-        case 0x0: /* USART_FLAG_TC */
-            return 0x0040;
+        case 0x0:
+            if (s && s->chr) {
+                qemu_chr_accept_input(s->chr);
+            } else {
+                DPRINTF("NULL\n");
+            }
+            return 0xFFFFFFFF;
         default:
             qemu_log_mask(LOG_GUEST_ERROR,
                           "net_uart_read: Bad offset %x\n", (int)addr);
@@ -82,7 +123,11 @@ static void netduino_uart_write(void *opaque, hwaddr addr,
             return;
         case 0x4:
             ch = value;
-            qemu_chr_fe_write(s->chr, &ch, 1);
+            if (s && s->chr) {
+                qemu_chr_fe_write(s->chr, &ch, 1);
+            } else {
+                DPRINTF("NULL\n");
+            }
             return;
         default:
             qemu_log_mask(LOG_GUEST_ERROR,
@@ -94,10 +139,6 @@ static const MemoryRegionOps netduino_uart_ops = {
     .read = netduino_uart_read,
     .write = netduino_uart_write,
     .endianness = DEVICE_NATIVE_ENDIAN,
-    .valid = {
-        .min_access_size = 4,
-        .max_access_size = 4
-    }
 };
 
 static int netduino_uart_init(SysBusDevice *sbd)
@@ -105,13 +146,18 @@ static int netduino_uart_init(SysBusDevice *sbd)
     DeviceState *dev = DEVICE(sbd);
     struct net_uart *s = NETDUINO_UART(dev);
 
-    s->chr = qemu_char_get_next_serial();
-
     sysbus_init_irq(sbd, &s->irq);
 
     memory_region_init_io(&s->mmio, OBJECT(s), &netduino_uart_ops, s,
-                          TYPE_NETDUINO_UART, 0x2000);
+                          TYPE_NETDUINO_UART, 0x1000);
     sysbus_init_mmio(sbd, &s->mmio);
+
+    s->chr = qemu_char_get_next_serial();
+
+    if (s->chr) {
+        qemu_chr_add_handlers(s->chr, NULL, uart_receive,
+                              uart_event, s);
+    }
 
     return 0;
 }
