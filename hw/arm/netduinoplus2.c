@@ -124,6 +124,10 @@ static void netduinoplus2_init(MachineState *machine)
     sysbus_create_simple("netduino_usart", 0x40011400,
                          pic[71]);
 
+    /* System configuration controller */
+    sysbus_create_simple("netduino_syscfg", 0x40013800,
+                         pic[71]);
+
     /* Attach GPIO devices */
     for (i = 0; i < 9; i++) {
         gpio_dev[i] = sysbus_create_simple("netduino_gpio", gpio_addr[i],

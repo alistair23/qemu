@@ -9,7 +9,7 @@ common-obj-$(CONFIG_PCI_TESTDEV) += pci-testdev.o
 obj-$(CONFIG_VMPORT) += vmport.o
 
 # ARM devices
-common-obj-$(CONFIG_PL310) += arm_l2x0.o
+common-obj-$(CONFIG_PL310) += arm_l2x0.o syscfg.o
 common-obj-$(CONFIG_INTEGRATOR_DEBUG) += arm_integrator_debug.o
 common-obj-$(CONFIG_A9SCU) += a9scu.o
 common-obj-$(CONFIG_ARM11SCU) += arm11scu.o
