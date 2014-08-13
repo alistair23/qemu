@@ -44,29 +44,20 @@ typedef struct NETDUINO_GPIOState {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
-    uint32_t locked;
-    uint32_t data;
-    uint32_t old_data;
-    uint32_t dir;
-    uint32_t isense;
-    uint32_t ibe;
-    uint32_t iev;
-    uint32_t im;
-    uint32_t istate;
-    uint32_t afsel;
-    uint32_t dr2r;
-    uint32_t dr4r;
-    uint32_t dr8r;
-    uint32_t odr;
-    uint32_t pur;
-    uint32_t pdr;
-    uint32_t slr;
-    uint32_t den;
-    uint32_t cr;
-    uint32_t float_high;
-    uint32_t amsel;
+
+    uint32_t gpio_moder;
+    uint32_t gpio_otyper;
+    uint32_t gpio_ospeedr;
+    uint32_t gpio_pupdr;
+    uint32_t gpio_idr;
+    uint32_t gpio_odr;
+    uint32_t gpio_bsrr;
+    uint32_t gpio_lckr;
+    uint32_t gpio_afrl;
+    uint32_t gpio_afrh;
+
     qemu_irq irq;
-    qemu_irq out[8];
+    //qemu_irq out[8];
     const unsigned char *id;
 } NETDUINO_GPIOState;
 
@@ -75,54 +66,59 @@ static const VMStateDescription vmstate_netduino_gpio = {
     .version_id = 2,
     .minimum_version_id = 1,
     .fields = (VMStateField[]) {
-        VMSTATE_UINT32(locked, NETDUINO_GPIOState),
-        VMSTATE_UINT32(data, NETDUINO_GPIOState),
-        VMSTATE_UINT32(old_data, NETDUINO_GPIOState),
-        VMSTATE_UINT32(dir, NETDUINO_GPIOState),
-        VMSTATE_UINT32(isense, NETDUINO_GPIOState),
-        VMSTATE_UINT32(ibe, NETDUINO_GPIOState),
-        VMSTATE_UINT32(iev, NETDUINO_GPIOState),
-        VMSTATE_UINT32(im, NETDUINO_GPIOState),
-        VMSTATE_UINT32(istate, NETDUINO_GPIOState),
-        VMSTATE_UINT32(afsel, NETDUINO_GPIOState),
-        VMSTATE_UINT32(dr2r, NETDUINO_GPIOState),
-        VMSTATE_UINT32(dr4r, NETDUINO_GPIOState),
-        VMSTATE_UINT32(dr8r, NETDUINO_GPIOState),
-        VMSTATE_UINT32(odr, NETDUINO_GPIOState),
-        VMSTATE_UINT32(pur, NETDUINO_GPIOState),
-        VMSTATE_UINT32(pdr, NETDUINO_GPIOState),
-        VMSTATE_UINT32(slr, NETDUINO_GPIOState),
-        VMSTATE_UINT32(den, NETDUINO_GPIOState),
-        VMSTATE_UINT32(cr, NETDUINO_GPIOState),
-        VMSTATE_UINT32(float_high, NETDUINO_GPIOState),
-        VMSTATE_UINT32_V(amsel, NETDUINO_GPIOState, 2),
+        VMSTATE_UINT32(gpio_moder, NETDUINO_GPIOState),
+        VMSTATE_UINT32(gpio_otyper, NETDUINO_GPIOState),
+        VMSTATE_UINT32(gpio_ospeedr, NETDUINO_GPIOState),
+        VMSTATE_UINT32(gpio_pupdr, NETDUINO_GPIOState),
+        VMSTATE_UINT32(gpio_idr, NETDUINO_GPIOState),
+        VMSTATE_UINT32(gpio_odr, NETDUINO_GPIOState),
+        VMSTATE_UINT32(gpio_bsrr, NETDUINO_GPIOState),
+        VMSTATE_UINT32(gpio_lckr, NETDUINO_GPIOState),
+        VMSTATE_UINT32(gpio_afrl, NETDUINO_GPIOState),
+        VMSTATE_UINT32(gpio_afrh, NETDUINO_GPIOState),
         VMSTATE_END_OF_LIST()
     }
 };
 
-static void netduino_gpio_update(NETDUINO_GPIOState *s)
-{
-    uint8_t changed;
+//static void netduino_gpio_update(NETDUINO_GPIOState *s)
+//{
+    /*uint8_t changed;
     uint8_t mask;
     uint8_t out;
-    int i;
+    int i; */
 
-    out = (s->data & s->dir) | ~s->dir;
-    changed = s->old_data ^ out;
-    if (!changed)
-        return;
+    //out = (s->data & s->dir) | ~s->dir;
+    //changed = s->old_data ^ out;
+    //if (!changed)
+    //    return;
 
-    DPRINTF("Update\n");
+    //DPRINTF("Update\n");
 
-    s->old_data = out;
-    for (i = 0; i < 8; i++) {
+    //s->old_data = out;
+    /*for (i = 0; i < 8; i++) {
         mask = 1 << i;
         if (changed & mask) {
             DPRINTF("Set output %d = %d\n", i, (out & mask) != 0);
             DPRINTF("Set output %d = %d\n", i, (out & mask) != 0);
             qemu_set_irq(s->out[i], (out & mask) != 0);
         }
-    }
+    }*/
+//}
+
+static void gpio_reset(DeviceState *dev)
+{
+    NETDUINO_GPIOState *s = NETDUINO_GPIO(dev);
+
+    s->gpio_moder = 0xA8000000;
+    s->gpio_otyper = 0x00000000;
+    s->gpio_ospeedr = 0x00000000;
+    s->gpio_pupdr = 0x64000000;
+    s->gpio_idr = 0x00000000;
+    s->gpio_odr = 0x00000000;
+    s->gpio_bsrr = 0x00000000;
+    s->gpio_lckr = 0x00000000;
+    s->gpio_afrl = 0x00000000;
+    s->gpio_afrh = 0x00000000;
 }
 
 static uint64_t netduino_gpio_read(void *opaque, hwaddr offset,
@@ -130,23 +126,47 @@ static uint64_t netduino_gpio_read(void *opaque, hwaddr offset,
 {
     NETDUINO_GPIOState *s = (NETDUINO_GPIOState *)opaque;
 
-    DPRINTF("Read 0x%x, 0x%x\n", s->data, (uint) offset);
-    //int i;
-/*    for (i = 0; i < 8; i++) {
-        qemu_set_irq(s->out[i], 0);
-        qemu_set_irq(s->out[i], 1);
-        qemu_set_irq(s->out[i], 0);
-    } */
+    DPRINTF("Read 0x%x, 0x%x\n", s->gpio_odr, (uint) offset);
 
-    qemu_set_irq(s->irq, 0);
-    qemu_set_irq(s->irq, 1);
-    qemu_set_irq(s->irq, 0);
-    netduino_gpio_update(s);
+    switch (offset) {
+        case 0x00:
+            return s->gpio_moder;
+        case 0x04:
+            return s->gpio_otyper;
+        case 0x08:
+            return s->gpio_ospeedr;
+        case 0x0C:
+            return s->gpio_pupdr;
+        case 0x10:
+            /* HACK: This is a hack to trigger interrupts */
+            qemu_set_irq(s->irq, 0);
+            qemu_set_irq(s->irq, 1);
+            qemu_set_irq(s->irq, 0);
+            return s->gpio_idr;
+        case 0x14:
+            return s->gpio_odr;
+        case 0x18:
+            return s->gpio_bsrr;
+        case 0x1C:
+            return s->gpio_lckr;
+        case 0x20:
+            return s->gpio_afrl;
+        case 0x24:
+            return s->gpio_afrh;
 
-    if (offset < 0x400) {
-        return s->data;
+        /*int i;
+        for (i = 0; i < 8; i++) {
+            qemu_set_irq(s->out[i], 0);
+            qemu_set_irq(s->out[i], 1);
+        }*/
+
+        /*case 0x10:
+            qemu_set_irq(s->irq, 0);
+            qemu_set_irq(s->irq, 1);
+            qemu_set_irq(s->irq, 0);
+            return 0;*/
     }
-    return 0;
+    return 0x0000FFFF;
 }
 
 static void netduino_gpio_write(void *opaque, hwaddr offset,
@@ -154,11 +174,34 @@ static void netduino_gpio_write(void *opaque, hwaddr offset,
 {
     NETDUINO_GPIOState *s = (NETDUINO_GPIOState *)opaque;
 
-    DPRINTF("Write 0x%x, 0x%x, 0x%x\n", (uint) value, (uint) offset, (uint) s->data);
+    DPRINTF("Write 0x%x, 0x%x, 0x%x\n", (uint) value, (uint) offset, (uint) s->gpio_odr);
+
+    switch (offset) {
+        case 0x00:
+            s->gpio_moder = (uint32_t) value;
+        case 0x04:
+            s->gpio_otyper = (uint32_t) value;
+        case 0x08:
+            s->gpio_ospeedr = (uint32_t) value;
+        case 0x0C:
+            s->gpio_pupdr = (uint32_t) value;
+        case 0x10:
+            s->gpio_idr = (uint32_t) value;
+        case 0x14:
+            s->gpio_odr = (uint32_t) value;
+        case 0x18:
+            s->gpio_bsrr = (uint32_t) value;
+        case 0x1C:
+            s->gpio_lckr = (uint32_t) value;
+        case 0x20:
+            s->gpio_afrl = (uint32_t) value;
+        case 0x24:
+            s->gpio_afrh = (uint32_t) value;
+        }
 
     if (offset < 0x40) {
-        s->data = value;
-        netduino_gpio_update(s);
+        s->gpio_odr = value;
+        //netduino_gpio_update(s);
         return;
     }
     return;
@@ -166,16 +209,16 @@ static void netduino_gpio_write(void *opaque, hwaddr offset,
 
 static void netduino_gpio_set_irq(void * opaque, int irq, int level)
 {
-    NETDUINO_GPIOState *s = (NETDUINO_GPIOState *)opaque;
-    uint8_t mask;
+    //NETDUINO_GPIOState *s = (NETDUINO_GPIOState *)opaque;
+    //uint8_t mask;
 
-    mask = 1 << irq;
-    if ((s->dir & mask) == 0) {
-        s->data &= ~mask;
+    //mask = 1 << irq;
+    /*if ((s->dir & mask) == 0) {
+        s->gpio_odr &= ~mask;
         if (level)
-            s->data |= mask;
+            s->gpio_odr |= mask;
         netduino_gpio_update(s);
-    }
+    }*/
 }
 
 static const MemoryRegionOps netduino_gpio_ops = {
@@ -192,8 +235,8 @@ static int netduino_gpio_initfn(SysBusDevice *sbd)
     memory_region_init_io(&s->iomem, OBJECT(s), &netduino_gpio_ops, s, "netduino_gpio", 0x2000);
     sysbus_init_mmio(sbd, &s->iomem);
     sysbus_init_irq(sbd, &s->irq);
-    qdev_init_gpio_in(dev, netduino_gpio_set_irq, 8);
-    qdev_init_gpio_out(dev, s->out, 8);
+    //qdev_init_gpio_in(dev, netduino_gpio_set_irq, 8);
+    //qdev_init_gpio_out(dev, s->out, 8);
     return 0;
 }
 
@@ -211,6 +254,7 @@ static void netduino_gpio_class_init(ObjectClass *klass, void *data)
 
     k->init = netduino_gpio_initfn;
     dc->vmsd = &vmstate_netduino_gpio;
+    dc->reset = gpio_reset;
 }
 
 static const TypeInfo netduino_gpio_info = {
