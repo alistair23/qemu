@@ -65,7 +65,7 @@ static void netduinoplus2_init(MachineState *machine)
 
     qemu_irq gpio_in[7][8];
     qemu_irq gpio_out[7][8];
-    qemu_irq pic[64];
+    qemu_irq pic[96];
     ARMCPU *cpu;
     CPUARMState *env;
     DeviceState *nvic;
@@ -91,11 +91,12 @@ static void netduinoplus2_init(MachineState *machine)
     memory_region_add_subregion(address_space_mem, 0x20000000, sram);
 
     nvic = qdev_create(NULL, "armv7m_nvic");
+    qdev_prop_set_uint32(nvic, "num-irq", 96);
     env->nvic = nvic;
     qdev_init_nofail(nvic);
     sysbus_connect_irq(SYS_BUS_DEVICE(nvic), 0,
                        qdev_get_gpio_in(DEVICE(cpu), ARM_CPU_IRQ));
-    for (i = 0; i < 64; i++) {
+    for (i = 0; i < 96; i++) {
         pic[i] = qdev_get_gpio_in(nvic, i);
     }
 
@@ -124,14 +125,14 @@ static void netduinoplus2_init(MachineState *machine)
     /* Attach GPIO devices */
     for (i = 0; i < 9; i++) {
         gpio_dev[i] = sysbus_create_simple("netduino_gpio", gpio_addr[i],
-                                           pic[23 + i - 2]);
+                                           pic[23]);
         for (j = 0; j < 8; j++) {
             gpio_in[i][j] = qdev_get_gpio_in(gpio_dev[i], j);
             gpio_out[i][j] = NULL;
         }
     }
 
-    memory_region_init_ram(hack, NULL, "netduino.hack", 0x08000000 - 1);
+    memory_region_init_ram(hack, NULL, "netduino.hack", 0x8000000 - 1);
     vmstate_register_ram_global(hack);
     memory_region_set_readonly(hack, true);
     memory_region_add_subregion(address_space_mem, 0xfffff000, hack);
