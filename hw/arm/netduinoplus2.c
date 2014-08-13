@@ -63,8 +63,8 @@ static void netduinoplus2_init(MachineState *machine)
     ARMV7MResetArgs reset_args;
     DeviceState *gpio_dev[9];
 
-    qemu_irq gpio_in[7][8];
-    qemu_irq gpio_out[7][8];
+    //qemu_irq gpio_in[7][8];
+    //qemu_irq gpio_out[7][8];
     qemu_irq pic[96];
     ARMCPU *cpu;
     CPUARMState *env;
@@ -73,7 +73,7 @@ static void netduinoplus2_init(MachineState *machine)
     int image_size;
     uint64_t entry;
     uint64_t lowaddr;
-    int i, j;
+    int i;
     int big_endian = 0;
 
     /* The Netduinio Plus 2 uses a Cortex-M4, while QEMU currently supports
@@ -118,7 +118,7 @@ static void netduinoplus2_init(MachineState *machine)
         }
     }
 
-    /* Attach a sample UART controller */
+    /* Attach a UART and USART controller */
     sysbus_create_simple("netduino_uart", 0x40004C00,
                          pic[52]);
     sysbus_create_simple("netduino_usart", 0x40011400,
@@ -128,10 +128,10 @@ static void netduinoplus2_init(MachineState *machine)
     for (i = 0; i < 9; i++) {
         gpio_dev[i] = sysbus_create_simple("netduino_gpio", gpio_addr[i],
                                            pic[23]);
-        for (j = 0; j < 8; j++) {
+        /*for (j = 0; j < 8; j++) {
             gpio_in[i][j] = qdev_get_gpio_in(gpio_dev[i], j);
             gpio_out[i][j] = NULL;
-        }
+        }*/
     }
 
     memory_region_init_ram(hack, NULL, "netduino.hack", 0x8000000 - 1);
