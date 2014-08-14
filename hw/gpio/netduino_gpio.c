@@ -22,7 +22,6 @@
  * THE SOFTWARE.
  */
 
-
 #include "hw/sysbus.h"
 
 //#define DEBUG_NETGPIO
@@ -140,28 +139,37 @@ static void netduino_gpio_write(void *opaque, hwaddr offset,
     switch (offset & 0xFD) {
         case 0x00:
             s->gpio_moder = (uint32_t) value;
+            return;
         case 0x04:
             s->gpio_otyper = (uint32_t) value;
+            return;
         case 0x08:
             s->gpio_ospeedr = (uint32_t) value;
+            return;
         case 0x0C:
             s->gpio_pupdr = (uint32_t) value;
+            return;
         case 0x10:
             s->gpio_idr = (uint32_t) value;
+            return;
         case 0x14:
             s->gpio_odr = (uint32_t) value;
+            return;
         case 0x18:
             s->gpio_odr &= (uint32_t) !(value >> 16);
             s->gpio_odr |= (uint32_t) value;
             s->gpio_bsrr = (uint32_t) value;
+            return;
         case 0x1C:
             s->gpio_lckr = (uint32_t) value;
+            return;
         case 0x20:
             s->gpio_afrl = (uint32_t) value;
+            return;
         case 0x24:
             s->gpio_afrh = (uint32_t) value;
+            return;
         }
-    return;
 }
 
 static const MemoryRegionOps netduino_gpio_ops = {

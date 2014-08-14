@@ -118,18 +118,25 @@ static void netduino_syscfg_write(void *opaque, hwaddr addr,
     switch (addr) {
         case 0x0:
             s->syscfg_memrmp = value;
+            return;
         case 0x04:
             s->syscfg_pmc = value;
+            return;
         case 0x08:
             s->syscfg_exticr1 = value;
+            return;
         case 0x0C:
             s->syscfg_exticr2 = value;
+            return;
         case 0x10:
             s->syscfg_exticr3 = value;
+            return;
         case 0x14:
             s->syscfg_exticr4 = value;
+            return;
         case 0x18:
             s->syscfg_cmpcr = value;
+            return;
         default:
             qemu_log_mask(LOG_GUEST_ERROR,
                           "net_syscfg_write: Bad offset %x\n", (int)addr);
