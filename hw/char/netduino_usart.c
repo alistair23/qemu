@@ -148,6 +148,7 @@ static void netduino_usart_write(void *opaque, hwaddr addr,
     switch (addr) {
         case 0x0:
             s->usart_sr = value;
+            return;
         case 0x04:
             if (value < 0xF000) {
                 ch = value;
@@ -155,17 +156,24 @@ static void netduino_usart_write(void *opaque, hwaddr addr,
                     qemu_chr_fe_write(s->chr, &ch, 1);
                 }
                 usart_reset(DEVICE(s));
+                s->usart_sr |= 0x40;
             }
+            return;
         case 0x08:
             s->usart_brr |= value;
+            return;
         case 0x0C:
             s->usart_cr1 |= value;
+            return;
         case 0x10:
             s->usart_cr2 |= value;
+            return;
         case 0x14:
             s->usart_cr3 |= value;
+            return;
         case 0x18:
             s->usart_gtpr |= value;
+            return;
         default:
             qemu_log_mask(LOG_GUEST_ERROR,
                           "net_usart_write: Bad offset %x\n", (int)addr);
