@@ -61,10 +61,7 @@ static void netduinoplus2_init(MachineState *machine)
     MemoryRegion *flash = g_new(MemoryRegion, 1);
     MemoryRegion *hack = g_new(MemoryRegion, 1);
     ARMV7MResetArgs reset_args;
-    DeviceState *gpio_dev[9];
 
-    //qemu_irq gpio_in[7][8];
-    //qemu_irq gpio_out[7][8];
     qemu_irq pic[96];
     ARMCPU *cpu;
     CPUARMState *env;
@@ -130,12 +127,8 @@ static void netduinoplus2_init(MachineState *machine)
 
     /* Attach GPIO devices */
     for (i = 0; i < 9; i++) {
-        gpio_dev[i] = sysbus_create_simple("netduino_gpio", gpio_addr[i],
+        sysbus_create_simple("netduino_gpio", gpio_addr[i],
                                            pic[23]);
-        /*for (j = 0; j < 8; j++) {
-            gpio_in[i][j] = qdev_get_gpio_in(gpio_dev[i], j);
-            gpio_out[i][j] = NULL;
-        }*/
     }
 
     memory_region_init_ram(hack, NULL, "netduino.hack", 0x8000000 - 1);
