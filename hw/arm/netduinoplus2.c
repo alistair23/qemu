@@ -125,6 +125,10 @@ static void netduinoplus2_init(MachineState *machine)
     sysbus_create_simple("netduino_syscfg", 0x40013800,
                          pic[71]);
 
+    /* Timer 5 */
+    sysbus_create_simple("netduino_timer", 0x40000C00,
+                         pic[50]);
+
     /* Attach GPIO devices */
     for (i = 0; i < 9; i++) {
         sysbus_create_simple("netduino_gpio", gpio_addr[i],
