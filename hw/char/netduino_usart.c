@@ -27,7 +27,7 @@
 #include "hw/hw.h"
 #include "net/net.h"
 
-//#define DEBUG_NETUSART
+/* #define DEBUG_NETUSART */
 
 #ifdef DEBUG_NETUSART
 #define DPRINTF(fmt, ...) \
@@ -35,6 +35,22 @@ do { printf("netduino_usart: " fmt , ## __VA_ARGS__); } while (0)
 #else
 #define DPRINTF(fmt, ...) do {} while(0)
 #endif
+
+#define USART_SR   0x00
+#define USART_DR   0x04
+#define USART_BRR  0x08
+#define USART_CR1  0x0C
+#define USART_CR2  0x10
+#define USART_CR3  0x14
+#define USART_GTPR 0x18
+
+#define USART_SR_TXE  (1 << 7)
+#define USART_SR_TC   (1 << 6)
+#define USART_SR_RXNE (1 << 5)
+
+#define USART_CR1_UE  (1 << 13)
+#define USART_CR1_RXNEIE  (1 << 5)
+#define USART_CR1_TE  (1 << 3)
 
 #define TYPE_NETDUINO_USART "netduino_usart"
 #define NETDUINO_USART(obj) \
@@ -61,17 +77,13 @@ struct net_usart {
 
 static int usart_can_receive(void *opaque)
 {
-    //struct net_usart *s = opaque;
-    //int ret = MAX(RX_FIFO_SIZE, TX_FIFO_SIZE);
-    //uint32_t ch_mode = s->r[R_MR] & UART_MR_CHMODE;
+    struct net_usart *s = opaque;
 
-    /*if (ch_mode == NORMAL_MODE || ch_mode == ECHO_MODE) {
-        ret = MIN(ret, RX_FIFO_SIZE - s->rx_count);
+    if (s->usart_cr1 & USART_CR1_UE && s->usart_cr1 & USART_CR1_TE) {
+        return 1;
     }
-    if (ch_mode == REMOTE_LOOPBACK || ch_mode == ECHO_MODE) {
-        ret = MIN(ret, TX_FIFO_SIZE - s->tx_count);
-    } */
-    return 1;
+
+    return 0;
 }
 
 static void usart_receive(void *opaque, const uint8_t *buf, int size)
@@ -84,8 +96,14 @@ static void usart_receive(void *opaque, const uint8_t *buf, int size)
 
     for (i = 0; i < num; i++) {
         s->usart_dr |= (buf[i] << i);
-        s->usart_sr |= 0xFF;
     }
+
+    s->usart_sr |= USART_SR_RXNE;
+
+    if (s->usart_cr1 & USART_CR1_RXNEIE) {
+        qemu_set_irq(s->irq, 1);
+    }
+
     DPRINTF("%c\n", s->usart_dr);
 }
 
@@ -105,27 +123,28 @@ static void usart_reset(DeviceState *dev)
 static uint64_t netduino_usart_read(void *opaque, hwaddr addr, unsigned int size)
 {
     struct net_usart *s = opaque;
-    uint64_t returnval;
+    uint64_t retvalue;
 
     DPRINTF("Read 0x%x\n", (uint) addr);
 
     switch (addr) {
-        case 0x0:
-            return s->usart_sr;
-        case 0x04:
+        case USART_SR:
+            retvalue = s->usart_sr;
+            s->usart_sr &= (USART_SR_TC ^ 0xFFFF);
+            return retvalue;
+        case USART_DR:
             DPRINTF("Value: %x, %c\n", s->usart_dr, s->usart_dr);
-            returnval = (s->usart_dr & 0xFF);
-            usart_reset(DEVICE(s));
-            return returnval;
-        case 0x08:
+            s->usart_sr |= USART_SR_TXE;
+            return (s->usart_dr & 0x3FF);
+        case USART_BRR:
             return s->usart_brr;
-        case 0x0C:
+        case USART_CR1:
             return s->usart_cr1;
-        case 0x10:
+        case USART_CR2:
             return s->usart_cr2;
-        case 0x14:
+        case USART_CR3:
             return s->usart_cr3;
-        case 0x18:
+        case USART_GTPR:
             return s->usart_gtpr;
         default:
             qemu_log_mask(LOG_GUEST_ERROR,
@@ -146,33 +165,36 @@ static void netduino_usart_write(void *opaque, hwaddr addr,
     DPRINTF("Write 0x%x, 0x%x\n", value, (uint) addr);
 
     switch (addr) {
-        case 0x0:
-            s->usart_sr = value;
+        case USART_SR:
+            if (value <= 0x3FF) {
+                s->usart_sr = value;
+            } else {
+                s->usart_sr &= value;
+            }
             return;
-        case 0x04:
+        case USART_DR:
             if (value < 0xF000) {
                 ch = value;
                 if (s->chr) {
                     qemu_chr_fe_write(s->chr, &ch, 1);
                 }
-                usart_reset(DEVICE(s));
-                s->usart_sr |= 0x40;
+                s->usart_sr |= USART_SR_TC;
             }
             return;
-        case 0x08:
-            s->usart_brr |= value;
+        case USART_BRR:
+            s->usart_brr = value;
             return;
-        case 0x0C:
-            s->usart_cr1 |= value;
+        case USART_CR1:
+            s->usart_cr1 = value;
             return;
-        case 0x10:
-            s->usart_cr2 |= value;
+        case USART_CR2:
+            s->usart_cr2 = value;
             return;
-        case 0x14:
-            s->usart_cr3 |= value;
+        case USART_CR3:
+            s->usart_cr3 = value;
             return;
-        case 0x18:
-            s->usart_gtpr |= value;
+        case USART_GTPR:
+            s->usart_gtpr = value;
             return;
         default:
             qemu_log_mask(LOG_GUEST_ERROR,
