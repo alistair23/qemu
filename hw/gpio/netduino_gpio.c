@@ -33,6 +33,17 @@ do { printf("netduino_gpio: " fmt , ## __VA_ARGS__); } while (0)
 #define DPRINTF(fmt, ...) do {} while(0)
 #endif
 
+#define GPIO_MODER   0x00
+#define GPIO_OTYPER  0x04
+#define GPIO_OSPEEDR 0x08
+#define GPIO_PUPDR   0x0C
+#define GPIO_IDR     0x10
+#define GPIO_ODR     0x14
+#define GPIO_BSRR    0x18
+#define GPIO_LCKR    0x1C
+#define GPIO_AFRL    0x20
+#define GPIO_AFRH    0x24
+
 #define TYPE_NETDUINO_GPIO "netduino_gpio"
 #define NETDUINO_GPIO(obj) OBJECT_CHECK(NETDUINO_GPIOState, (obj), TYPE_NETDUINO_GPIO)
 
@@ -84,7 +95,6 @@ static void gpio_reset(DeviceState *dev)
     s->gpio_ospeedr = 0x00000000;
     s->gpio_pupdr = 0x64000000;
     s->gpio_idr = 0x00000000;
-    /* 15 14 13 12 11 BlueLED 9 D0 7 6 5 4 3 2 1 0 */
     s->gpio_odr = 0x00000000;
     s->gpio_bsrr = 0x00000000;
     s->gpio_lckr = 0x00000000;
@@ -100,30 +110,26 @@ static uint64_t netduino_gpio_read(void *opaque, hwaddr offset,
     DPRINTF("Read 0x%x\n", (uint) offset);
 
     switch (offset & 0xFD) {
-        case 0x00:
+        case GPIO_MODER:
             return s->gpio_moder;
-        case 0x04:
+        case GPIO_OTYPER:
             return s->gpio_otyper;
-        case 0x08:
+        case GPIO_OSPEEDR:
             return s->gpio_ospeedr;
-        case 0x0C:
+        case GPIO_PUPDR:
             return s->gpio_pupdr;
-        case 0x10:
-            /* HACK: This is a hack to trigger interrupts */
-            /* qemu_set_irq(s->irq, 0);
-            qemu_set_irq(s->irq, 1);
-            qemu_set_irq(s->irq, 0); */
+        case GPIO_IDR:
             return s->gpio_idr;
-        case 0x14:
+        case GPIO_ODR:
             return s->gpio_odr;
-        case 0x18:
+        case GPIO_BSRR:
             /* gpio_bsrr reads as zero */
             return 0x00000000;
-        case 0x1C:
+        case GPIO_LCKR:
             return s->gpio_lckr;
-        case 0x20:
+        case GPIO_AFRL:
             return s->gpio_afrl;
-        case 0x24:
+        case GPIO_AFRH:
             return s->gpio_afrh;
     }
     return 0;
@@ -137,36 +143,36 @@ static void netduino_gpio_write(void *opaque, hwaddr offset,
     DPRINTF("Write 0x%x, 0x%x\n", (uint) value, (uint) offset);
 
     switch (offset & 0xFD) {
-        case 0x00:
+        case GPIO_MODER:
             s->gpio_moder = (uint32_t) value;
             return;
-        case 0x04:
+        case GPIO_OTYPER:
             s->gpio_otyper = (uint32_t) value;
             return;
-        case 0x08:
+        case GPIO_OSPEEDR:
             s->gpio_ospeedr = (uint32_t) value;
             return;
-        case 0x0C:
+        case GPIO_PUPDR:
             s->gpio_pupdr = (uint32_t) value;
             return;
-        case 0x10:
+        case GPIO_IDR:
             s->gpio_idr = (uint32_t) value;
             return;
-        case 0x14:
+        case GPIO_ODR:
             s->gpio_odr = (uint32_t) value;
             return;
-        case 0x18:
+        case GPIO_BSRR:
             s->gpio_odr &= (uint32_t) !(value >> 16);
             s->gpio_odr |= (uint32_t) value;
             s->gpio_bsrr = (uint32_t) value;
             return;
-        case 0x1C:
+        case GPIO_LCKR:
             s->gpio_lckr = (uint32_t) value;
             return;
-        case 0x20:
+        case GPIO_AFRL:
             s->gpio_afrl = (uint32_t) value;
             return;
-        case 0x24:
+        case GPIO_AFRH:
             s->gpio_afrh = (uint32_t) value;
             return;
         }
