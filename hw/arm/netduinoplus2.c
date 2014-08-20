@@ -135,7 +135,7 @@ static void netduinoplus2_init(MachineState *machine)
                                            pic[23]);
     }
 
-    memory_region_init_ram(hack, NULL, "netduino.hack", 0x8000000 - 1);
+    memory_region_init_ram(hack, NULL, "netduino.hack", 0x1000);
     vmstate_register_ram_global(hack);
     memory_region_set_readonly(hack, true);
     memory_region_add_subregion(address_space_mem, 0xfffff000, hack);
