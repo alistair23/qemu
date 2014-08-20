@@ -36,6 +36,14 @@ do { printf("netduino_syscfg: " fmt , ## __VA_ARGS__); } while (0)
 #define DPRINTF(fmt, ...) do {} while(0)
 #endif
 
+#define SYSCFG_MEMRMP  0x00
+#define SYSCFG_PMC     0x04
+#define SYSCFG_EXTICR1 0x08
+#define SYSCFG_EXTICR2 0x0C
+#define SYSCFG_EXTICR3 0x10
+#define SYSCFG_EXTICR4 0x14
+#define SYSCFG_CMPCR   0x20
+
 #define TYPE_NETDUINO_SYSCFG "netduino_syscfg"
 #define NETDUINO_SYSCFG(obj) \
     OBJECT_CHECK(struct net_syscfg, (obj), TYPE_NETDUINO_SYSCFG)
@@ -80,19 +88,19 @@ static uint64_t netduino_syscfg_read(void *opaque, hwaddr addr, unsigned int siz
     DPRINTF("Read 0x%x\n", (uint) addr);
 
     switch (addr) {
-        case 0x0:
+        case SYSCFG_MEMRMP:
             return s->syscfg_memrmp;
-        case 0x04:
+        case SYSCFG_PMC:
             return s->syscfg_pmc;
-        case 0x08:
+        case SYSCFG_EXTICR1:
             return s->syscfg_exticr1;
-        case 0x0C:
+        case SYSCFG_EXTICR2:
             return s->syscfg_exticr2;
-        case 0x10:
+        case SYSCFG_EXTICR3:
             return s->syscfg_exticr3;
-        case 0x14:
+        case SYSCFG_EXTICR4:
             return s->syscfg_exticr4;
-        case 0x18:
+        case SYSCFG_CMPCR:
             return s->syscfg_cmpcr;
         default:
             qemu_log_mask(LOG_GUEST_ERROR,
@@ -116,25 +124,25 @@ static void netduino_syscfg_write(void *opaque, hwaddr addr,
     DPRINTF("Write 0x%x, 0x%x\n", value, (uint) addr);
 
     switch (addr) {
-        case 0x0:
+        case SYSCFG_MEMRMP:
             s->syscfg_memrmp = value;
             return;
-        case 0x04:
+        case SYSCFG_PMC:
             s->syscfg_pmc = value;
             return;
-        case 0x08:
+        case SYSCFG_EXTICR1:
             s->syscfg_exticr1 = value;
             return;
-        case 0x0C:
+        case SYSCFG_EXTICR2:
             s->syscfg_exticr2 = value;
             return;
-        case 0x10:
+        case SYSCFG_EXTICR3:
             s->syscfg_exticr3 = value;
             return;
-        case 0x14:
+        case SYSCFG_EXTICR4:
             s->syscfg_exticr4 = value;
             return;
-        case 0x18:
+        case SYSCFG_CMPCR:
             s->syscfg_cmpcr = value;
             return;
         default:
