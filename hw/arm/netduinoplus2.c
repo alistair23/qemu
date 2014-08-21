@@ -63,9 +63,11 @@ static void netduinoplus2_init(MachineState *machine)
     ARMV7MResetArgs reset_args;
 
     qemu_irq pic[96];
+    ObjectClass *cpu_oc;
     ARMCPU *cpu;
     CPUARMState *env;
     DeviceState *nvic;
+    Error *err = NULL;
 
     int image_size;
     uint64_t entry;
@@ -75,7 +77,21 @@ static void netduinoplus2_init(MachineState *machine)
 
     /* The Netduinio Plus 2 uses a Cortex-M4, while QEMU currently supports
      * the Cortex-M3, so that is being used instead */
-    cpu = cpu_arm_init("cortex-m3");
+    cpu_oc = cpu_class_by_name(TYPE_ARM_CPU, "cortex-m3");
+
+    cpu = ARM_CPU(object_new(object_class_get_name(cpu_oc)));
+
+    object_property_set_int(OBJECT(cpu), 0x08000000, "rom-address", &err);
+    if (err) {
+        error_report("%s", error_get_pretty(err));
+        exit(1);
+    }
+    object_property_set_bool(OBJECT(cpu), true, "realized", &err);
+    if (err) {
+        error_report("%s", error_get_pretty(err));
+        exit(1);
+    }
+
     env = &cpu->env;
 
     memory_region_init_ram(flash, NULL, "netduino.flash", 1024 * 1024);

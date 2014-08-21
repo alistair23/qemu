@@ -147,6 +147,7 @@ typedef struct ARMCPU {
     uint32_t id_isar3;
     uint32_t id_isar4;
     uint32_t id_isar5;
+    uint32_t rom_address;
     uint64_t id_aa64pfr0;
     uint64_t id_aa64pfr1;
     uint64_t id_aa64dfr0;

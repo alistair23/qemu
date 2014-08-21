@@ -145,7 +145,7 @@ static void arm_cpu_reset(CPUState *s)
         uint8_t *rom;
 
         env->daif &= ~PSTATE_I;
-        rom = rom_ptr(0x08000000);
+        rom = rom_ptr(cpu->rom_address);
         if (rom) {
             /* Address zero is covered by ROM which hasn't yet been
              * copied into physical memory.
@@ -1160,6 +1160,7 @@ static Property arm_cpu_properties[] = {
     DEFINE_PROP_BOOL("start-powered-off", ARMCPU, start_powered_off, false),
     DEFINE_PROP_UINT32("psci-conduit", ARMCPU, psci_conduit, 0),
     DEFINE_PROP_UINT32("midr", ARMCPU, midr, 0),
+    DEFINE_PROP_UINT32("rom-address", ARMCPU, rom_address, 0),
     DEFINE_PROP_END_OF_LIST()
 };
 
