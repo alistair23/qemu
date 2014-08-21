@@ -91,7 +91,8 @@ static void netduinoplus2_init(MachineState *machine)
     int big_endian = 0;
 
     /* The Netduinio Plus 2 uses a Cortex-M4, while QEMU currently supports
-     * the Cortex-M3, so that is being used instead */
+     * the Cortex-M3, so that is being used instead
+     */
     cpu_oc = cpu_class_by_name(TYPE_ARM_CPU, "cortex-m3");
 
     cpu = ARM_CPU(object_new(object_class_get_name(cpu_oc)));
@@ -171,6 +172,10 @@ static void netduinoplus2_init(MachineState *machine)
         sysbus_mmio_map(busdev, 0, gpio_addr[i]);
     }
 
+    /* Hack to map an additional page of ram at the top of the address
+     * space.  This stops qemu complaining about executing code outside RAM
+     * when returning from an exception.
+     */
     memory_region_init_ram(hack, NULL, "netduino.hack", 0x1000);
     vmstate_register_ram_global(hack);
     memory_region_set_readonly(hack, true);

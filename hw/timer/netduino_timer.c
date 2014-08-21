@@ -26,7 +26,7 @@
 #include "qemu/timer.h"
 #include "sysemu/sysemu.h"
 
-//#define DEBUG_NETTIMER
+/* #define DEBUG_NETTIMER */
 
 #ifdef DEBUG_NETTIMER
 #define DPRINTF(fmt, ...) \
