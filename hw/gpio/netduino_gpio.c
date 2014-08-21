@@ -91,10 +91,21 @@ static void gpio_reset(DeviceState *dev)
 {
     NETDUINO_GPIOState *s = NETDUINO_GPIO(dev);
 
-    s->gpio_moder = 0xA8000000;
+    if (s->gpio_letter == 'a') {
+        s->gpio_moder = 0xA8000000;
+        s->gpio_pupdr = 0x64000000;
+        s->gpio_ospeedr = 0x00000000;
+    } else if (s->gpio_letter == 'b') {
+        s->gpio_moder = 0x00000280;
+        s->gpio_pupdr = 0x00000100;
+        s->gpio_ospeedr = 0x000000C0;
+    } else {
+        s->gpio_moder = 0x00000000;
+        s->gpio_pupdr = 0x00000000;
+        s->gpio_ospeedr = 0x00000000;
+    }
+
     s->gpio_otyper = 0x00000000;
-    s->gpio_ospeedr = 0x00000000;
-    s->gpio_pupdr = 0x64000000;
     s->gpio_idr = 0x00000000;
     s->gpio_odr = 0x00000000;
     s->gpio_bsrr = 0x00000000;
