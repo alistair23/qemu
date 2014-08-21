@@ -37,6 +37,7 @@
 
 typedef struct ARMV7MResetArgs {
     ARMCPU *cpu;
+    uint32_t reset_sp;
     uint32_t reset_pc;
 } ARMV7MResetArgs;
 
@@ -44,9 +45,11 @@ static void armv7m_reset(void *opaque)
 {
     ARMV7MResetArgs *args = opaque;
 
-    args->cpu->env.regs[15] = args->reset_pc;
-    args->cpu->env.thumb = args->reset_pc & 1;
     cpu_reset(CPU(args->cpu));
+
+    args->cpu->env.regs[13] = args->reset_sp & 0xFFFFFFFC;
+    args->cpu->env.thumb = args->reset_pc & 1;
+    args->cpu->env.regs[15] = args->reset_pc & ~1;
 }
 
 static void netduinoplus2_init(MachineState *machine)
@@ -72,6 +75,7 @@ static void netduinoplus2_init(MachineState *machine)
     MemoryRegion *address_space_mem = get_system_memory();
     MemoryRegion *sram = g_new(MemoryRegion, 1);
     MemoryRegion *flash = g_new(MemoryRegion, 1);
+    MemoryRegion *flash_alias = g_new(MemoryRegion, 1);
     MemoryRegion *hack = g_new(MemoryRegion, 1);
     ARMV7MResetArgs reset_args;
 
@@ -97,11 +101,6 @@ static void netduinoplus2_init(MachineState *machine)
 
     cpu = ARM_CPU(object_new(object_class_get_name(cpu_oc)));
 
-    object_property_set_int(OBJECT(cpu), 0x08000000, "rom-address", &err);
-    if (err) {
-        error_report("%s", error_get_pretty(err));
-        exit(1);
-    }
     object_property_set_bool(OBJECT(cpu), true, "realized", &err);
     if (err) {
         error_report("%s", error_get_pretty(err));
@@ -111,9 +110,16 @@ static void netduinoplus2_init(MachineState *machine)
     env = &cpu->env;
 
     memory_region_init_ram(flash, NULL, "netduino.flash", 1024 * 1024);
+    memory_region_init_alias(flash_alias, NULL, "netduino.flash.alias",
+                             flash, 0, 1024 * 1024);
+
     vmstate_register_ram_global(flash);
+
     memory_region_set_readonly(flash, true);
+    memory_region_set_readonly(flash_alias, true);
+
     memory_region_add_subregion(address_space_mem, 0x08000000, flash);
+    memory_region_add_subregion(address_space_mem, 0, flash_alias);
 
     memory_region_init_ram(sram, NULL, "netduino.sram", 192 * 1024);
     vmstate_register_ram_global(sram);
@@ -184,6 +190,7 @@ static void netduinoplus2_init(MachineState *machine)
     reset_args = (ARMV7MResetArgs) {
         .cpu = cpu,
         .reset_pc = entry,
+        .reset_sp = (0x20000000 + (192 * 1024 * 2)/3),
     };
     qemu_register_reset(armv7m_reset,
                         g_memdup(&reset_args, sizeof(reset_args)));
