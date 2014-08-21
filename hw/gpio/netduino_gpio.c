@@ -52,6 +52,7 @@ typedef struct NETDUINO_GPIOState {
 
     MemoryRegion iomem;
 
+    uint8_t gpio_letter;
     uint32_t gpio_moder;
     uint32_t gpio_otyper;
     uint32_t gpio_ospeedr;
@@ -184,6 +185,12 @@ static const MemoryRegionOps netduino_gpio_ops = {
     .endianness = DEVICE_NATIVE_ENDIAN,
 };
 
+static Property net_gpio_properties[] = {
+    DEFINE_PROP_UINT8("gpio-letter", NETDUINO_GPIOState, gpio_letter, (uint) 'a'),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+
 static int netduino_gpio_initfn(SysBusDevice *sbd)
 {
     DeviceState *dev = DEVICE(sbd);
@@ -202,6 +209,7 @@ static void netduino_gpio_class_init(ObjectClass *klass, void *data)
 
     k->init = netduino_gpio_initfn;
     dc->vmsd = &vmstate_netduino_gpio;
+    dc->props = net_gpio_properties;
     dc->reset = gpio_reset;
 }
 

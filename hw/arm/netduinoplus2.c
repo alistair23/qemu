@@ -55,6 +55,10 @@ static void netduinoplus2_init(MachineState *machine)
       { 0x40020000, 0x40020400, 0x40020800, 0x40020C00, 0x40021000,
         0x40021400, 0x40021800, 0x40021C00, 0x40022000, 0x40022400,
         0x40022800 };
+    static const uint8_t gpio_letters[] =
+      { 'a', 'b', 'c', 'd', 'e',
+        'f', 'g', 'h', 'i', 'j',
+        'k' };
     static const uint32_t tim2_5_addr[] =
       { 0x40000000, 0x40000400, 0x40000800, 0x40000C00 };
     static const uint32_t usart_addr[] =
@@ -161,8 +165,7 @@ static void netduinoplus2_init(MachineState *machine)
     /* Attach GPIO devices */
     for (i = 0; i < 11; i++) {
         gpio = qdev_create(NULL, "netduino_gpio");
-        /* Add a way to specifcy which GPIO letter it is */
-        //qdev_prop_set_uint8(gpio, "GPIO_letter",  A);
+        qdev_prop_set_uint8(gpio, "gpio-letter", gpio_letters[i]);
         qdev_init_nofail(gpio);
         busdev = SYS_BUS_DEVICE(gpio);
         sysbus_mmio_map(busdev, 0, gpio_addr[i]);
