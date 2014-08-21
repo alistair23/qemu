@@ -27,7 +27,7 @@
 #include "hw/hw.h"
 #include "net/net.h"
 
-//#define DEBUG_NETSYSCFG
+/* #define DEBUG_NETSYSCFG */
 
 #ifdef DEBUG_NETSYSCFG
 #define DPRINTF(fmt, ...) \
@@ -125,22 +125,26 @@ static void netduino_syscfg_write(void *opaque, hwaddr addr,
 
     switch (addr) {
         case SYSCFG_MEMRMP:
-            s->syscfg_memrmp = value;
+            /* This isn't supported, so don't allow the guest to write to it
+             * s->syscfg_memrmp = value;
+             */
             return;
         case SYSCFG_PMC:
-            s->syscfg_pmc = value;
+            /* This isn't supported, so don't allow the guest to write to it
+             * s->syscfg_pmc = value;
+             */
             return;
         case SYSCFG_EXTICR1:
-            s->syscfg_exticr1 = value;
+            s->syscfg_exticr1 = (value & 0xFF);
             return;
         case SYSCFG_EXTICR2:
-            s->syscfg_exticr2 = value;
+            s->syscfg_exticr2 = (value & 0xFF);
             return;
         case SYSCFG_EXTICR3:
-            s->syscfg_exticr3 = value;
+            s->syscfg_exticr3 = (value & 0xFF);
             return;
         case SYSCFG_EXTICR4:
-            s->syscfg_exticr4 = value;
+            s->syscfg_exticr4 = (value & 0xFF);
             return;
         case SYSCFG_CMPCR:
             s->syscfg_cmpcr = value;
