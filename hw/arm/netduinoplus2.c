@@ -51,10 +51,19 @@ static void armv7m_reset(void *opaque)
 
 static void netduinoplus2_init(MachineState *machine)
 {
-    static const uint32_t gpio_addr[9] =
+    static const uint32_t gpio_addr[] =
       { 0x40020000, 0x40020400, 0x40020800, 0x40020C00, 0x40021000,
-        0x40021400, 0x40021800, 0x40021C00, 0x40022000};
+        0x40021400, 0x40021800, 0x40021C00, 0x40022000, 0x40022400,
+        0x40022800 };
+    static const uint32_t tim2_5_addr[] =
+      { 0x40000000, 0x40000400, 0x40000800, 0x40000C00 };
+    static const uint32_t usart_addr[] =
+      { 0x40011000, 0x40004400, 0x40004800, 0x40004C00,
+        0x40005000, 0x40011400, 0x40007800,  0x40007C00};
     const char *kernel_filename = machine->kernel_filename;
+
+    static const int tim2_5_irq[] = {28, 29, 30, 50};
+    static const int usart_irq[] = {37, 38, 39, 52, 53, 71, 82, 83};
 
     MemoryRegion *address_space_mem = get_system_memory();
     MemoryRegion *sram = g_new(MemoryRegion, 1);
@@ -67,6 +76,8 @@ static void netduinoplus2_init(MachineState *machine)
     ARMCPU *cpu;
     CPUARMState *env;
     DeviceState *nvic;
+    DeviceState *gpio;
+    SysBusDevice *busdev;
     Error *err = NULL;
 
     int image_size;
@@ -131,24 +142,30 @@ static void netduinoplus2_init(MachineState *machine)
         }
     }
 
-    /* Attach a UART4 (uses USART registers) and USART6 controller */
-    sysbus_create_simple("netduino_usart", 0x40004C00,
-                         pic[52]);
-    sysbus_create_simple("netduino_usart", 0x40011400,
-                         pic[71]);
-
     /* System configuration controller */
     sysbus_create_simple("netduino_syscfg", 0x40013800,
                          pic[71]);
 
-    /* Timer 5 */
-    sysbus_create_simple("netduino_timer", 0x40000C00,
-                         pic[50]);
+    /* Attach a UART (uses USART registers) and USART controllers */
+    for (i = 0; i < 7; i++) {
+        sysbus_create_simple("netduino_usart", usart_addr[i],
+                             pic[usart_irq[i]]);
+    }
+
+    /* Timer 2 to 5 */
+    for (i = 0; i < 4; i++) {
+        sysbus_create_simple("netduino_timer", tim2_5_addr[i],
+                             pic[tim2_5_irq[i]]);
+    }
 
     /* Attach GPIO devices */
-    for (i = 0; i < 9; i++) {
-        sysbus_create_simple("netduino_gpio", gpio_addr[i],
-                                           pic[23]);
+    for (i = 0; i < 11; i++) {
+        gpio = qdev_create(NULL, "netduino_gpio");
+        /* Add a way to specifcy which GPIO letter it is */
+        //qdev_prop_set_uint8(gpio, "GPIO_letter",  A);
+        qdev_init_nofail(gpio);
+        busdev = SYS_BUS_DEVICE(gpio);
+        sysbus_mmio_map(busdev, 0, gpio_addr[i]);
     }
 
     memory_region_init_ram(hack, NULL, "netduino.hack", 0x1000);
