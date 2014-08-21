@@ -26,7 +26,7 @@
 #include "qemu/timer.h"
 #include "sysemu/sysemu.h"
 
-/* #define DEBUG_NETTIMER */
+#define DEBUG_NETTIMER
 
 #ifdef DEBUG_NETTIMER
 #define DPRINTF(fmt, ...) \
@@ -54,6 +54,8 @@ do { printf("netduino_timer: " fmt , ## __VA_ARGS__); } while (0)
 #define TIM_DCR      0x48
 #define TIM_DMAR     0x4C
 #define TIM_OR       0x50
+
+#define TIM_CR1_CEN   1
 
 #define TYPE_NETTIMER "netduino_timer"
 #define NETTIMER(obj) OBJECT_CHECK(NETTIMERState, (obj), TYPE_NETTIMER)
@@ -91,16 +93,18 @@ typedef struct NETTIMERState {
 
 static void netduino_timer_update(NETTIMERState *s)
 {
+    s->tim_sr |= 1;
     qemu_set_irq(s->irq, 1);
+    qemu_set_irq(s->irq, 0);
 }
 
 static void netduino_timer_interrupt(void * opaque)
 {
     NETTIMERState *s = (NETTIMERState *)opaque;
 
-    DPRINTF("Alarm raised\n");
+    DPRINTF("INterrupt\n");
 
-    if (s->tim_dier == 0x01) {
+    if (s->tim_dier == 0x01 && s->tim_cr1 & TIM_CR1_CEN) {
         netduino_timer_update(s);
     }
 }
@@ -115,24 +119,23 @@ static void netduino_timer_set_alarm(NETTIMERState *s)
 {
     uint32_t ticks;
 
-    ticks = (uint32_t) ((s->tim_arr - netduino_timer_get_count(s))/(s->tim_psc + 1));
+    DPRINTF("Alarm raised: 0x%x\n", s->tim_cr1);
+
+    ticks = (uint32_t) (s->tim_arr - netduino_timer_get_count(s)/(s->tim_psc + 1));
     DPRINTF("Alarm set in %u ticks\n", ticks);
-    if (ticks == 0) {
-        DPRINTF("If\n");
+    if (ticks <= 0) {
         timer_del(s->timer);
         netduino_timer_interrupt(s);
     } else {
-        DPRINTF("Else\n");
         int64_t now = qemu_clock_get_ns(rtc_clock);
         timer_mod(s->timer, now + (int64_t)ticks);
+        DPRINTF("Wait Time: 0x%x\n", now + (int64_t)ticks);
     }
 }
 
 static void netduino_timer_reset(DeviceState *dev)
 {
     struct NETTIMERState *s = NETTIMER(dev);
-
-    s->tick_offset = 0;
 
     s->tim_cr1 = 0;
     s->tim_cr2 = 0;
@@ -228,7 +231,8 @@ static void netduino_timer_write(void * opaque, hwaddr offset,
             s->tim_dier = value;
             return;
         case TIM_SR:
-            s->tim_sr = value;
+            s->tim_sr &= value;
+            netduino_timer_set_alarm(s);
             return;
         case TIM_EGR:
             s->tim_egr = value;
@@ -303,10 +307,32 @@ static int netduino_timer_init(SysBusDevice *dev)
     return 0;
 }
 
+static void netduino_timer_pre_save(void *opaque)
+{
+    NETTIMERState *s = (NETTIMERState *)opaque;
+
+    /* tick_offset is base_time - rtc_clock base time.  Instead, we want to
+     * store the base time relative to the QEMU_CLOCK_VIRTUAL for backwards-compatibility.  */
+    int64_t delta = qemu_clock_get_ns(rtc_clock) - qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
+    s->tick_offset_vmstate = s->tick_offset + delta / get_ticks_per_sec();
+}
+
+static int netduino_timer_post_load(void *opaque, int version_id)
+{
+    NETTIMERState *s = (NETTIMERState *)opaque;
+
+    int64_t delta = qemu_clock_get_ns(rtc_clock) - qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
+    s->tick_offset = s->tick_offset_vmstate - delta / get_ticks_per_sec();
+    netduino_timer_set_alarm(s);
+    return 0;
+}
+
 static const VMStateDescription vmstate_netduino_timer = {
     .name = "netduino_timer",
     .version_id = 1,
     .minimum_version_id = 1,
+    .pre_save = netduino_timer_pre_save,
+    .post_load = netduino_timer_post_load,
     .fields = (VMStateField[]) {
         VMSTATE_UINT32(tick_offset_vmstate, NETTIMERState),
         VMSTATE_UINT32(tim_cr1, NETTIMERState),
