@@ -33,7 +33,7 @@
 #define DPRINTF(fmt, ...) \
 do { printf("netduino_syscfg: " fmt , ## __VA_ARGS__); } while (0)
 #else
-#define DPRINTF(fmt, ...) do {} while(0)
+#define DPRINTF(fmt, ...) do {} while (0)
 #endif
 
 #define SYSCFG_MEMRMP  0x00
@@ -77,7 +77,8 @@ static void syscfg_reset(DeviceState *dev)
     s->syscfg_cmpcr = 0x00000000;
 }
 
-static uint64_t netduino_syscfg_read(void *opaque, hwaddr addr, unsigned int size)
+static uint64_t netduino_syscfg_read(void *opaque, hwaddr addr,
+                                     unsigned int size)
 {
     struct net_syscfg *s = opaque;
 
@@ -88,24 +89,24 @@ static uint64_t netduino_syscfg_read(void *opaque, hwaddr addr, unsigned int siz
     DPRINTF("Read 0x%x\n", (uint) addr);
 
     switch (addr) {
-        case SYSCFG_MEMRMP:
-            return s->syscfg_memrmp;
-        case SYSCFG_PMC:
-            return s->syscfg_pmc;
-        case SYSCFG_EXTICR1:
-            return s->syscfg_exticr1;
-        case SYSCFG_EXTICR2:
-            return s->syscfg_exticr2;
-        case SYSCFG_EXTICR3:
-            return s->syscfg_exticr3;
-        case SYSCFG_EXTICR4:
-            return s->syscfg_exticr4;
-        case SYSCFG_CMPCR:
-            return s->syscfg_cmpcr;
-        default:
-            qemu_log_mask(LOG_GUEST_ERROR,
-                          "net_syscfg_read: Bad offset %x\n", (int)addr);
-            return 0;
+    case SYSCFG_MEMRMP:
+        return s->syscfg_memrmp;
+    case SYSCFG_PMC:
+        return s->syscfg_pmc;
+    case SYSCFG_EXTICR1:
+        return s->syscfg_exticr1;
+    case SYSCFG_EXTICR2:
+        return s->syscfg_exticr2;
+    case SYSCFG_EXTICR3:
+        return s->syscfg_exticr3;
+    case SYSCFG_EXTICR4:
+        return s->syscfg_exticr4;
+    case SYSCFG_CMPCR:
+        return s->syscfg_cmpcr;
+    default:
+        qemu_log_mask(LOG_GUEST_ERROR,
+                      "net_syscfg_read: Bad offset %x\n", (int)addr);
+        return 0;
     }
 
     return 0;
@@ -124,34 +125,34 @@ static void netduino_syscfg_write(void *opaque, hwaddr addr,
     DPRINTF("Write 0x%x, 0x%x\n", value, (uint) addr);
 
     switch (addr) {
-        case SYSCFG_MEMRMP:
-            /* This isn't supported, so don't allow the guest to write to it
-             * s->syscfg_memrmp = value;
-             */
-            return;
-        case SYSCFG_PMC:
-            /* This isn't supported, so don't allow the guest to write to it
-             * s->syscfg_pmc = value;
-             */
-            return;
-        case SYSCFG_EXTICR1:
-            s->syscfg_exticr1 = (value & 0xFF);
-            return;
-        case SYSCFG_EXTICR2:
-            s->syscfg_exticr2 = (value & 0xFF);
-            return;
-        case SYSCFG_EXTICR3:
-            s->syscfg_exticr3 = (value & 0xFF);
-            return;
-        case SYSCFG_EXTICR4:
-            s->syscfg_exticr4 = (value & 0xFF);
-            return;
-        case SYSCFG_CMPCR:
-            s->syscfg_cmpcr = value;
-            return;
-        default:
-            qemu_log_mask(LOG_GUEST_ERROR,
-                          "net_syscfg_write: Bad offset %x\n", (int)addr);
+    case SYSCFG_MEMRMP:
+        /* This isn't supported, so don't allow the guest to write to it
+         * s->syscfg_memrmp = value;
+         */
+        return;
+    case SYSCFG_PMC:
+        /* This isn't supported, so don't allow the guest to write to it
+         * s->syscfg_pmc = value;
+         */
+        return;
+    case SYSCFG_EXTICR1:
+        s->syscfg_exticr1 = (value & 0xFF);
+        return;
+    case SYSCFG_EXTICR2:
+        s->syscfg_exticr2 = (value & 0xFF);
+        return;
+    case SYSCFG_EXTICR3:
+        s->syscfg_exticr3 = (value & 0xFF);
+        return;
+    case SYSCFG_EXTICR4:
+        s->syscfg_exticr4 = (value & 0xFF);
+        return;
+    case SYSCFG_CMPCR:
+        s->syscfg_cmpcr = value;
+        return;
+    default:
+        qemu_log_mask(LOG_GUEST_ERROR,
+                      "net_syscfg_write: Bad offset %x\n", (int)addr);
     }
 }
 

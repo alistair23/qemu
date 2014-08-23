@@ -33,7 +33,7 @@
 #define DPRINTF(fmt, ...) \
 do { printf("netduino_usart: " fmt , ## __VA_ARGS__); } while (0)
 #else
-#define DPRINTF(fmt, ...) do {} while(0)
+#define DPRINTF(fmt, ...) do {} while (0)
 #endif
 
 #define USART_SR   0x00
@@ -120,7 +120,8 @@ static void usart_reset(DeviceState *dev)
     s->usart_gtpr = 0x00000000;
 }
 
-static uint64_t netduino_usart_read(void *opaque, hwaddr addr, unsigned int size)
+static uint64_t netduino_usart_read(void *opaque, hwaddr addr,
+                                    unsigned int size)
 {
     struct net_usart *s = opaque;
     uint64_t retvalue;
@@ -128,28 +129,28 @@ static uint64_t netduino_usart_read(void *opaque, hwaddr addr, unsigned int size
     DPRINTF("Read 0x%x\n", (uint) addr);
 
     switch (addr) {
-        case USART_SR:
-            retvalue = s->usart_sr;
-            s->usart_sr &= (USART_SR_TC ^ 0xFFFF);
-            return retvalue;
-        case USART_DR:
-            DPRINTF("Value: %x, %c\n", s->usart_dr, s->usart_dr);
-            s->usart_sr |= USART_SR_TXE;
-            return (s->usart_dr & 0x3FF);
-        case USART_BRR:
-            return s->usart_brr;
-        case USART_CR1:
-            return s->usart_cr1;
-        case USART_CR2:
-            return s->usart_cr2;
-        case USART_CR3:
-            return s->usart_cr3;
-        case USART_GTPR:
-            return s->usart_gtpr;
-        default:
-            qemu_log_mask(LOG_GUEST_ERROR,
-                          "net_usart_read: Bad offset %x\n", (int)addr);
-            return 0;
+    case USART_SR:
+        retvalue = s->usart_sr;
+        s->usart_sr &= (USART_SR_TC ^ 0xFFFF);
+        return retvalue;
+    case USART_DR:
+        DPRINTF("Value: %x, %c\n", s->usart_dr, s->usart_dr);
+        s->usart_sr |= USART_SR_TXE;
+        return s->usart_dr & 0x3FF;
+    case USART_BRR:
+        return s->usart_brr;
+    case USART_CR1:
+        return s->usart_cr1;
+    case USART_CR2:
+        return s->usart_cr2;
+    case USART_CR3:
+        return s->usart_cr3;
+    case USART_GTPR:
+        return s->usart_gtpr;
+    default:
+        qemu_log_mask(LOG_GUEST_ERROR,
+                      "net_usart_read: Bad offset %x\n", (int)addr);
+        return 0;
     }
 
     return 0;
@@ -165,40 +166,40 @@ static void netduino_usart_write(void *opaque, hwaddr addr,
     DPRINTF("Write 0x%x, 0x%x\n", value, (uint) addr);
 
     switch (addr) {
-        case USART_SR:
-            if (value <= 0x3FF) {
-                s->usart_sr = value;
-            } else {
-                s->usart_sr &= value;
+    case USART_SR:
+        if (value <= 0x3FF) {
+            s->usart_sr = value;
+        } else {
+            s->usart_sr &= value;
+        }
+        return;
+    case USART_DR:
+        if (value < 0xF000) {
+            ch = value;
+            if (s->chr) {
+                qemu_chr_fe_write(s->chr, &ch, 1);
             }
-            return;
-        case USART_DR:
-            if (value < 0xF000) {
-                ch = value;
-                if (s->chr) {
-                    qemu_chr_fe_write(s->chr, &ch, 1);
-                }
-                s->usart_sr |= USART_SR_TC;
-            }
-            return;
-        case USART_BRR:
-            s->usart_brr = value;
-            return;
-        case USART_CR1:
-            s->usart_cr1 = value;
-            return;
-        case USART_CR2:
-            s->usart_cr2 = value;
-            return;
-        case USART_CR3:
-            s->usart_cr3 = value;
-            return;
-        case USART_GTPR:
-            s->usart_gtpr = value;
-            return;
-        default:
-            qemu_log_mask(LOG_GUEST_ERROR,
-                          "net_usart_write: Bad offset %x\n", (int)addr);
+            s->usart_sr |= USART_SR_TC;
+        }
+        return;
+    case USART_BRR:
+        s->usart_brr = value;
+        return;
+    case USART_CR1:
+        s->usart_cr1 = value;
+        return;
+    case USART_CR2:
+        s->usart_cr2 = value;
+        return;
+    case USART_CR3:
+        s->usart_cr3 = value;
+        return;
+    case USART_GTPR:
+        s->usart_gtpr = value;
+        return;
+    default:
+        qemu_log_mask(LOG_GUEST_ERROR,
+                      "net_usart_write: Bad offset %x\n", (int)addr);
     }
 }
 

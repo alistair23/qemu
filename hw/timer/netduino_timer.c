@@ -32,7 +32,7 @@
 #define DPRINTF(fmt, ...) \
 do { printf("netduino_timer: " fmt , ## __VA_ARGS__); } while (0)
 #else
-#define DPRINTF(fmt, ...) do {} while(0)
+#define DPRINTF(fmt, ...) do {} while (0)
 #endif
 
 #define TIM_CR1      0x00
@@ -98,7 +98,7 @@ static void netduino_timer_update(NETTIMERState *s)
     qemu_set_irq(s->irq, 0);
 }
 
-static void netduino_timer_interrupt(void * opaque)
+static void netduino_timer_interrupt(void *opaque)
 {
     NETTIMERState *s = (NETTIMERState *)opaque;
 
@@ -121,7 +121,8 @@ static void netduino_timer_set_alarm(NETTIMERState *s)
 
     DPRINTF("Alarm raised: 0x%x\n", s->tim_cr1);
 
-    ticks = (uint32_t) (s->tim_arr - netduino_timer_get_count(s)/(s->tim_psc + 1));
+    ticks = (uint32_t) (s->tim_arr - netduino_timer_get_count(s)/
+                                     (s->tim_psc + 1));
     DPRINTF("Alarm set in %u ticks\n", ticks);
     if (ticks <= 0) {
         timer_del(s->timer);
@@ -129,7 +130,7 @@ static void netduino_timer_set_alarm(NETTIMERState *s)
     } else {
         int64_t now = qemu_clock_get_ns(rtc_clock);
         timer_mod(s->timer, now + (int64_t)ticks);
-        DPRINTF("Wait Time: 0x%x\n", now + (int64_t)ticks);
+        DPRINTF("Wait Time: 0x%x\n", (uint32_t) (now + ticks));
     }
 }
 
@@ -166,50 +167,50 @@ static uint64_t netduino_timer_read(void *opaque, hwaddr offset,
     DPRINTF("Read 0x%x\n", (uint) offset);
 
     switch (offset) {
-        case TIM_CR1:
-            return s->tim_cr1;
-        case TIM_CR2:
-            return s->tim_cr2;
-        case TIM_SMCR:
-            return s->tim_smcr;
-        case TIM_DIER:
-            return s->tim_dier;
-        case TIM_SR:
-            return s->tim_sr;
-        case TIM_EGR:
-            return s->tim_egr;
-        case TIM_CCMR1:
-            return s->tim_ccmr1;
-        case TIM_CCMR2:
-            return s->tim_ccmr2;
-        case TIM_CCER:
-            return s->tim_ccer;
-        case TIM_CNT:
-            return s->tim_cnt;
-        case TIM_PSC:
-            return s->tim_psc;
-        case TIM_ARR:
-            return s->tim_arr;
-        case TIM_CCR1:
-            return s->tim_ccr1;
-        case TIM_CCR2:
-            return s->tim_ccr2;
-        case TIM_CCR3:
-            return s->tim_ccr3;
-        case TIM_CCR4:
-            return s->tim_ccr4;
-        case TIM_DCR:
-            return s->tim_dcr;
-        case TIM_DMAR:
-            return s->tim_dmar;
-        case TIM_OR:
-            return s->tim_or;
+    case TIM_CR1:
+        return s->tim_cr1;
+    case TIM_CR2:
+        return s->tim_cr2;
+    case TIM_SMCR:
+        return s->tim_smcr;
+    case TIM_DIER:
+        return s->tim_dier;
+    case TIM_SR:
+        return s->tim_sr;
+    case TIM_EGR:
+        return s->tim_egr;
+    case TIM_CCMR1:
+        return s->tim_ccmr1;
+    case TIM_CCMR2:
+        return s->tim_ccmr2;
+    case TIM_CCER:
+        return s->tim_ccer;
+    case TIM_CNT:
+        return s->tim_cnt;
+    case TIM_PSC:
+        return s->tim_psc;
+    case TIM_ARR:
+        return s->tim_arr;
+    case TIM_CCR1:
+        return s->tim_ccr1;
+    case TIM_CCR2:
+        return s->tim_ccr2;
+    case TIM_CCR3:
+        return s->tim_ccr3;
+    case TIM_CCR4:
+        return s->tim_ccr4;
+    case TIM_DCR:
+        return s->tim_dcr;
+    case TIM_DMAR:
+        return s->tim_dmar;
+    case TIM_OR:
+        return s->tim_or;
     }
 
     return 0;
 }
 
-static void netduino_timer_write(void * opaque, hwaddr offset,
+static void netduino_timer_write(void *opaque, hwaddr offset,
                         uint64_t val64, unsigned size)
 {
     NETTIMERState *s = (NETTIMERState *)opaque;
@@ -218,66 +219,66 @@ static void netduino_timer_write(void * opaque, hwaddr offset,
     DPRINTF("Write 0x%x, 0x%x\n", value, (uint) offset);
 
     switch (offset) {
-        case TIM_CR1:
-            s->tim_cr1 = value;
-            return;
-        case TIM_CR2:
-            s->tim_cr2 = value;
-            return;
-        case TIM_SMCR:
-            s->tim_smcr = value;
-            return;
-        case TIM_DIER:
-            s->tim_dier = value;
-            return;
-        case TIM_SR:
-            s->tim_sr &= value;
-            netduino_timer_set_alarm(s);
-            return;
-        case TIM_EGR:
-            s->tim_egr = value;
-            return;
-        case TIM_CCMR1:
-            s->tim_ccmr1 = value;
-            return;
-        case TIM_CCMR2:
-            s->tim_ccmr2 = value;
-            return;
-        case TIM_CCER:
-            s->tim_ccer = value;
-            return;
-        case TIM_CNT:
-            s->tim_cnt = value;
-            netduino_timer_set_alarm(s);
-            return;
-        case TIM_PSC:
-            s->tim_psc = value;
-            return;
-        case TIM_ARR:
-            s->tim_arr = value;
-            netduino_timer_set_alarm(s);
-            return;
-        case TIM_CCR1:
-            s->tim_ccr1 = value;
-            return;
-        case TIM_CCR2:
-            s->tim_ccr2 = value;
-            return;
-        case TIM_CCR3:
-            s->tim_ccr3 = value;
-            return;
-        case TIM_CCR4:
-            s->tim_ccr4 = value;
-            return;
-        case TIM_DCR:
-            s->tim_dcr = value;
-            return;
-        case TIM_DMAR:
-            s->tim_dmar = value;
-            return;
-        case TIM_OR:
-            s->tim_or = value;
-            return;
+    case TIM_CR1:
+        s->tim_cr1 = value;
+        return;
+    case TIM_CR2:
+        s->tim_cr2 = value;
+        return;
+    case TIM_SMCR:
+        s->tim_smcr = value;
+        return;
+    case TIM_DIER:
+        s->tim_dier = value;
+        return;
+    case TIM_SR:
+        s->tim_sr &= value;
+        netduino_timer_set_alarm(s);
+        return;
+    case TIM_EGR:
+        s->tim_egr = value;
+        return;
+    case TIM_CCMR1:
+        s->tim_ccmr1 = value;
+        return;
+    case TIM_CCMR2:
+        s->tim_ccmr2 = value;
+        return;
+    case TIM_CCER:
+        s->tim_ccer = value;
+        return;
+    case TIM_CNT:
+        s->tim_cnt = value;
+        netduino_timer_set_alarm(s);
+        return;
+    case TIM_PSC:
+        s->tim_psc = value;
+        return;
+    case TIM_ARR:
+        s->tim_arr = value;
+        netduino_timer_set_alarm(s);
+        return;
+    case TIM_CCR1:
+        s->tim_ccr1 = value;
+        return;
+    case TIM_CCR2:
+        s->tim_ccr2 = value;
+        return;
+    case TIM_CCR3:
+        s->tim_ccr3 = value;
+        return;
+    case TIM_CCR4:
+        s->tim_ccr4 = value;
+        return;
+    case TIM_DCR:
+        s->tim_dcr = value;
+        return;
+    case TIM_DMAR:
+        s->tim_dmar = value;
+        return;
+    case TIM_OR:
+        s->tim_or = value;
+        return;
     }
 }
 
@@ -311,9 +312,8 @@ static void netduino_timer_pre_save(void *opaque)
 {
     NETTIMERState *s = (NETTIMERState *)opaque;
 
-    /* tick_offset is base_time - rtc_clock base time.  Instead, we want to
-     * store the base time relative to the QEMU_CLOCK_VIRTUAL for backwards-compatibility.  */
-    int64_t delta = qemu_clock_get_ns(rtc_clock) - qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
+    int64_t delta = qemu_clock_get_ns(rtc_clock) -
+                    qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
     s->tick_offset_vmstate = s->tick_offset + delta / get_ticks_per_sec();
 }
 
@@ -321,7 +321,8 @@ static int netduino_timer_post_load(void *opaque, int version_id)
 {
     NETTIMERState *s = (NETTIMERState *)opaque;
 
-    int64_t delta = qemu_clock_get_ns(rtc_clock) - qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
+    int64_t delta = qemu_clock_get_ns(rtc_clock) -
+                    qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
     s->tick_offset = s->tick_offset_vmstate - delta / get_ticks_per_sec();
     netduino_timer_set_alarm(s);
     return 0;

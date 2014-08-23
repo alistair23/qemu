@@ -59,19 +59,17 @@ static void armv7m_reset(void *opaque)
 
 static void netduinoplus2_init(MachineState *machine)
 {
-    static const uint32_t gpio_addr[] =
-      { 0x40020000, 0x40020400, 0x40020800, 0x40020C00, 0x40021000,
-        0x40021400, 0x40021800, 0x40021C00, 0x40022000, 0x40022400,
-        0x40022800 };
-    static const uint8_t gpio_letters[] =
-      { 'a', 'b', 'c', 'd', 'e',
-        'f', 'g', 'h', 'i', 'j',
-        'k' };
-    static const uint32_t tim2_5_addr[] =
-      { 0x40000000, 0x40000400, 0x40000800, 0x40000C00 };
-    static const uint32_t usart_addr[] =
-      { 0x40011000, 0x40004400, 0x40004800, 0x40004C00,
-        0x40005000, 0x40011400, 0x40007800,  0x40007C00};
+    static const uint32_t gpio_addr[] = { 0x40020000, 0x40020400, 0x40020800,
+        0x40020C00, 0x40021000, 0x40021400, 0x40021800, 0x40021C00,
+        0x40022000, 0x40022400, 0x40022800 };
+    static const uint8_t gpio_letters[] = { 'a', 'b', 'c',
+        'd', 'e', 'f', 'g', 'h',
+        'i', 'j', 'k' };
+    static const uint32_t tim2_5_addr[] = { 0x40000000, 0x40000400,
+        0x40000800, 0x40000C00 };
+    static const uint32_t usart_addr[] = { 0x40011000, 0x40004400,
+        0x40004800, 0x40004C00, 0x40005000, 0x40011400, 0x40007800,
+        0x40007C00 };
     const char *kernel_filename = machine->kernel_filename;
 
     static const int tim2_5_irq[] = {28, 29, 30, 50};
