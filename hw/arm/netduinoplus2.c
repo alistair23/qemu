@@ -35,6 +35,11 @@
 #include "qemu/error-report.h"
 #include "sysemu/qtest.h"
 
+#define FLASH_BASE_ADDRESS 0x08000000
+#define FLASH_SIZE (1024 * 1024)
+#define SRAM_BASE_ADDRESS 0x20000000
+#define SRAM_SIZE (192 * 1024)
+
 typedef struct ARMV7MResetArgs {
     ARMCPU *cpu;
     uint32_t reset_sp;
@@ -80,13 +85,11 @@ static void netduinoplus2_init(MachineState *machine)
     ARMV7MResetArgs reset_args;
 
     qemu_irq pic[96];
-    ObjectClass *cpu_oc;
     ARMCPU *cpu;
     CPUARMState *env;
     DeviceState *nvic;
     DeviceState *gpio;
     SysBusDevice *busdev;
-    Error *err = NULL;
 
     int image_size;
     uint64_t entry;
@@ -97,33 +100,24 @@ static void netduinoplus2_init(MachineState *machine)
     /* The Netduinio Plus 2 uses a Cortex-M4, while QEMU currently supports
      * the Cortex-M3, so that is being used instead
      */
-    cpu_oc = cpu_class_by_name(TYPE_ARM_CPU, "cortex-m3");
-
-    cpu = ARM_CPU(object_new(object_class_get_name(cpu_oc)));
-
-    object_property_set_bool(OBJECT(cpu), true, "realized", &err);
-    if (err) {
-        error_report("%s", error_get_pretty(err));
-        exit(1);
-    }
-
+    cpu = cpu_arm_init("cortex-m3");
     env = &cpu->env;
 
-    memory_region_init_ram(flash, NULL, "netduino.flash", 1024 * 1024);
+    memory_region_init_ram(flash, NULL, "netduino.flash", FLASH_SIZE);
     memory_region_init_alias(flash_alias, NULL, "netduino.flash.alias",
-                             flash, 0, 1024 * 1024);
+                             flash, 0, FLASH_SIZE);
 
     vmstate_register_ram_global(flash);
 
     memory_region_set_readonly(flash, true);
     memory_region_set_readonly(flash_alias, true);
 
-    memory_region_add_subregion(address_space_mem, 0x08000000, flash);
+    memory_region_add_subregion(address_space_mem, FLASH_BASE_ADDRESS, flash);
     memory_region_add_subregion(address_space_mem, 0, flash_alias);
 
-    memory_region_init_ram(sram, NULL, "netduino.sram", 192 * 1024);
+    memory_region_init_ram(sram, NULL, "netduino.sram", SRAM_SIZE);
     vmstate_register_ram_global(sram);
-    memory_region_add_subregion(address_space_mem, 0x20000000, sram);
+    memory_region_add_subregion(address_space_mem, SRAM_BASE_ADDRESS, sram);
 
     nvic = qdev_create(NULL, "armv7m_nvic");
     qdev_prop_set_uint32(nvic, "num-irq", 96);
@@ -144,7 +138,7 @@ static void netduinoplus2_init(MachineState *machine)
         image_size = load_elf(kernel_filename, NULL, NULL, &entry, &lowaddr,
                               NULL, big_endian, ELF_MACHINE, 1);
         if (image_size < 0) {
-            image_size = load_image_targphys(kernel_filename, 0, 1024 * 1024);
+            image_size = load_image_targphys(kernel_filename, 0, FLASH_SIZE);
             lowaddr = 0;
         }
         if (image_size < 0) {
@@ -190,7 +184,7 @@ static void netduinoplus2_init(MachineState *machine)
     reset_args = (ARMV7MResetArgs) {
         .cpu = cpu,
         .reset_pc = entry,
-        .reset_sp = (0x20000000 + (192 * 1024 * 2)/3),
+        .reset_sp = (SRAM_BASE_ADDRESS + (SRAM_SIZE * 2)/3),
     };
     qemu_register_reset(armv7m_reset,
                         g_memdup(&reset_args, sizeof(reset_args)));
