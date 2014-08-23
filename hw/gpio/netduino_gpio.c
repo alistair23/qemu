@@ -33,16 +33,22 @@ do { printf("netduino_gpio: " fmt , ## __VA_ARGS__); } while (0)
 #define DPRINTF(fmt, ...) do {} while(0)
 #endif
 
-#define GPIO_MODER   0x00
-#define GPIO_OTYPER  0x04
-#define GPIO_OSPEEDR 0x08
-#define GPIO_PUPDR   0x0C
-#define GPIO_IDR     0x10
-#define GPIO_ODR     0x14
-#define GPIO_BSRR    0x18
-#define GPIO_LCKR    0x1C
-#define GPIO_AFRL    0x20
-#define GPIO_AFRH    0x24
+#define GPIO_MODER     0x00
+#define GPIO_OTYPER    0x04
+#define GPIO_OSPEEDR   0x08
+#define GPIO_PUPDR     0x0C
+#define GPIO_IDR       0x10
+#define GPIO_ODR       0x14
+#define GPIO_BSRR      0x18
+#define GPIO_BSRR_HIGH 0x1A
+#define GPIO_LCKR      0x1C
+#define GPIO_AFRL      0x20
+#define GPIO_AFRH      0x24
+
+#define GPIO_MODER_INPUT       0
+#define GPIO_MODER_GENERAL_OUT 1
+#define GPIO_MODER_ALT         2
+#define GPIO_MODER_ANALOG      3
 
 #define TYPE_NETDUINO_GPIO "netduino_gpio"
 #define NETDUINO_GPIO(obj) OBJECT_CHECK(NETDUINO_GPIOState, (obj), TYPE_NETDUINO_GPIO)
@@ -52,7 +58,6 @@ typedef struct NETDUINO_GPIOState {
 
     MemoryRegion iomem;
 
-    uint8_t gpio_letter;
     uint32_t gpio_moder;
     uint32_t gpio_otyper;
     uint32_t gpio_ospeedr;
@@ -64,13 +69,21 @@ typedef struct NETDUINO_GPIOState {
     uint32_t gpio_afrl;
     uint32_t gpio_afrh;
 
+    /* This is an internal QEMU Register, used to determine the
+     * GPIO direction as set by gpio_moder
+     * 1: Input; 0: Output
+     */
+    uint16_t gpio_direction;
+    /* The GPIO letter (a - k) from the datasheet */
+    uint8_t gpio_letter;
+
     qemu_irq irq;
     const unsigned char *id;
 } NETDUINO_GPIOState;
 
 static const VMStateDescription vmstate_netduino_gpio = {
     .name = "netduino_gpio",
-    .version_id = 2,
+    .version_id = 1,
     .minimum_version_id = 1,
     .fields = (VMStateField[]) {
         VMSTATE_UINT32(gpio_moder, NETDUINO_GPIOState),
@@ -112,6 +125,7 @@ static void gpio_reset(DeviceState *dev)
     s->gpio_lckr = 0x00000000;
     s->gpio_afrl = 0x00000000;
     s->gpio_afrh = 0x00000000;
+    s->gpio_direction = 0x0000;
 }
 
 static uint64_t netduino_gpio_read(void *opaque, hwaddr offset,
@@ -131,7 +145,8 @@ static uint64_t netduino_gpio_read(void *opaque, hwaddr offset,
         case GPIO_PUPDR:
             return s->gpio_pupdr;
         case GPIO_IDR:
-            return s->gpio_idr;
+            /* This register changes based on the external GPIO pins */
+            return (s->gpio_idr & s->gpio_direction);
         case GPIO_ODR:
             return s->gpio_odr;
         case GPIO_BSRR:
@@ -151,12 +166,25 @@ static void netduino_gpio_write(void *opaque, hwaddr offset,
                         uint64_t value, unsigned size)
 {
     NETDUINO_GPIOState *s = (NETDUINO_GPIOState *)opaque;
+    int i, mask;
 
     DPRINTF("Write 0x%x, 0x%x\n", (uint) value, (uint) offset);
 
-    switch (offset & 0xFD) {
+    switch (offset) {
         case GPIO_MODER:
             s->gpio_moder = (uint32_t) value;
+            for (i = 0; i < 32; i = i + 2) {
+                /* Two bits determine the I/O direction/mode */
+                mask = (1 << i) + (1 << (i + 1));
+
+                if ((s->gpio_moder & mask) == GPIO_MODER_INPUT) {
+                    s->gpio_direction |= (1 << (i/2));
+                } else if ((s->gpio_moder & mask) == GPIO_MODER_GENERAL_OUT) {
+                    s->gpio_direction &= (0xFFFF ^ (1 << (i/2)));
+                } else {
+                    /* Not supported at the moment */
+                }
+            }
             return;
         case GPIO_OTYPER:
             s->gpio_otyper = (uint32_t) value;
@@ -168,15 +196,27 @@ static void netduino_gpio_write(void *opaque, hwaddr offset,
             s->gpio_pupdr = (uint32_t) value;
             return;
         case GPIO_IDR:
-            s->gpio_idr = (uint32_t) value;
+            /* Read Only Register */
+            qemu_log_mask(LOG_GUEST_ERROR,
+                          "net_gpio%c_write: Read Only Register 0x%x\n",
+                          s->gpio_letter, (int)offset);
             return;
         case GPIO_ODR:
-            s->gpio_odr = (uint32_t) value;
+            s->gpio_odr = ((uint32_t) value & (s->gpio_direction ^ 0xFFFF));
+            return;
+        case GPIO_BSRR_HIGH:
+            /* Reset the output value */
+            s->gpio_odr &= (uint32_t) (value ^ 0xFFFF);
+            s->gpio_bsrr = (uint32_t) (value << 16);
+            DPRINTF("Output: 0x%x\n", s->gpio_odr);
             return;
         case GPIO_BSRR:
-            s->gpio_odr &= (uint32_t) !(value >> 16);
-            s->gpio_odr |= (uint32_t) value;
+            /* Reset the output value */
+            s->gpio_odr &= (uint32_t) ((value >> 16) ^ 0xFFFF);
+            /* Sets the output value */
+            s->gpio_odr |= (uint32_t) (value & 0xFFFF);
             s->gpio_bsrr = (uint32_t) value;
+            DPRINTF("Output: 0x%x\n", s->gpio_odr);
             return;
         case GPIO_LCKR:
             s->gpio_lckr = (uint32_t) value;
