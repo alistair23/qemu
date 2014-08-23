@@ -104,7 +104,7 @@ static void usart_receive(void *opaque, const uint8_t *buf, int size)
         qemu_set_irq(s->irq, 1);
     }
 
-    DPRINTF("%c\n", s->usart_dr);
+    DPRINTF("Inputting: %c\n", s->usart_dr);
 }
 
 static void usart_reset(DeviceState *dev)
