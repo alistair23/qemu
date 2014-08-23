@@ -25,7 +25,6 @@
 #include "hw/sysbus.h"
 #include "sysemu/char.h"
 #include "hw/hw.h"
-#include "net/net.h"
 
 /* #define DEBUG_NETUSART */
 
@@ -69,10 +68,8 @@ struct net_usart {
     uint32_t usart_cr3;
     uint32_t usart_gtpr;
 
-    NICState *nic;
     CharDriverState *chr;
     qemu_irq irq;
-    NICConf conf;
 };
 
 static int usart_can_receive(void *opaque)
