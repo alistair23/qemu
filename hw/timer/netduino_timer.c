@@ -1,5 +1,5 @@
 /*
- * Netduino Plus 2 USART
+ * STM32F405xx Plus 2 USART
  *
  * Copyright (c) 2014 Alistair Francis <alistair@alistair23.me>
  *
@@ -26,14 +26,17 @@
 #include "qemu/timer.h"
 #include "sysemu/sysemu.h"
 
-#define DEBUG_NETTIMER
-
-#ifdef DEBUG_NETTIMER
-#define DPRINTF(fmt, ...) \
-do { printf("netduino_timer: " fmt , ## __VA_ARGS__); } while (0)
-#else
-#define DPRINTF(fmt, ...) do {} while (0)
+#ifndef ST_TIM2_5_ERR_DEBUG
+#define ST_TIM2_5_ERR_DEBUG 0
 #endif
+
+#define DB_PRINT_L(lvl, fmt, args...) do { \
+    if (ST_TIM2_5_ERR_DEBUG >= lvl) { \
+        fprintf(stderr, "stn32f405xx_timer: %s:" fmt, __func__, ## args); \
+    } \
+} while (0);
+
+#define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
 
 #define TIM_CR1      0x00
 #define TIM_CR2      0x04
@@ -57,10 +60,10 @@ do { printf("netduino_timer: " fmt , ## __VA_ARGS__); } while (0)
 
 #define TIM_CR1_CEN   1
 
-#define TYPE_NETTIMER "netduino_timer"
-#define NETTIMER(obj) OBJECT_CHECK(NETTIMERState, (obj), TYPE_NETTIMER)
+#define TYPE_STM32F405xxTIMER "stn32f405xx-timer"
+#define STM32F405xxTIMER(obj) OBJECT_CHECK(NetTimer, (obj), TYPE_STM32F405xxTIMER)
 
-typedef struct NETTIMERState {
+typedef struct NetTimer {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
@@ -89,54 +92,54 @@ typedef struct NETTIMERState {
     uint32_t tim_dcr;
     uint32_t tim_dmar;
     uint32_t tim_or;
-} NETTIMERState;
+} NetTimer;
 
-static void netduino_timer_update(NETTIMERState *s)
+static void stn32f405xx_timer_update(NetTimer *s)
 {
     s->tim_sr |= 1;
-    qemu_set_irq(s->irq, 1);
-    qemu_set_irq(s->irq, 0);
+    qemu_irq_pulse(s->irq);
 }
 
-static void netduino_timer_interrupt(void *opaque)
+static void stn32f405xx_timer_interrupt(void *opaque)
 {
-    NETTIMERState *s = (NETTIMERState *)opaque;
+    NetTimer *s = (NetTimer *)opaque;
 
-    DPRINTF("INterrupt\n");
+    DB_PRINT("Interrupt in: %s\n", __func__);
 
     if (s->tim_dier == 0x01 && s->tim_cr1 & TIM_CR1_CEN) {
-        netduino_timer_update(s);
+        stn32f405xx_timer_update(s);
     }
 }
 
-static uint32_t netduino_timer_get_count(NETTIMERState *s)
+static uint32_t stn32f405xx_timer_get_count(NetTimer *s)
 {
     int64_t now = qemu_clock_get_ns(rtc_clock);
     return s->tick_offset + now / get_ticks_per_sec();
 }
 
-static void netduino_timer_set_alarm(NETTIMERState *s)
+static void stn32f405xx_timer_set_alarm(NetTimer *s)
 {
     uint32_t ticks;
 
-    DPRINTF("Alarm raised: 0x%x\n", s->tim_cr1);
+    DB_PRINT("Alarm raised in: %s at 0x%x\n", __func__, s->tim_cr1);
 
-    ticks = (uint32_t) (s->tim_arr - netduino_timer_get_count(s)/
-                                     (s->tim_psc + 1));
-    DPRINTF("Alarm set in %u ticks\n", ticks);
-    if (ticks <= 0) {
+    ticks = s->tim_arr - stn32f405xx_timer_get_count(s)/
+                         (s->tim_psc + 1);
+    DB_PRINT("Alarm set in %u ticks\n", ticks);
+
+    if (ticks == 0) {
         timer_del(s->timer);
-        netduino_timer_interrupt(s);
+        stn32f405xx_timer_interrupt(s);
     } else {
-        int64_t now = qemu_clock_get_ns(rtc_clock);
+        int64_t now = qemu_clock_get_ns(rtc_clock) / get_ticks_per_sec();
         timer_mod(s->timer, now + (int64_t)ticks);
-        DPRINTF("Wait Time: 0x%x\n", (uint32_t) (now + ticks));
+        DB_PRINT("Wait Time: 0x%x\n", (uint32_t) (now + ticks));
     }
 }
 
-static void netduino_timer_reset(DeviceState *dev)
+static void stn32f405xx_timer_reset(DeviceState *dev)
 {
-    struct NETTIMERState *s = NETTIMER(dev);
+    struct NetTimer *s = STM32F405xxTIMER(dev);
 
     s->tim_cr1 = 0;
     s->tim_cr2 = 0;
@@ -159,12 +162,12 @@ static void netduino_timer_reset(DeviceState *dev)
     s->tim_or = 0;
 }
 
-static uint64_t netduino_timer_read(void *opaque, hwaddr offset,
+static uint64_t stn32f405xx_timer_read(void *opaque, hwaddr offset,
                            unsigned size)
 {
-    NETTIMERState *s = (NETTIMERState *)opaque;
+    NetTimer *s = (NetTimer *)opaque;
 
-    DPRINTF("Read 0x%x\n", (uint) offset);
+    DB_PRINT("Read 0x%x\n", (uint) offset);
 
     switch (offset) {
     case TIM_CR1:
@@ -205,18 +208,21 @@ static uint64_t netduino_timer_read(void *opaque, hwaddr offset,
         return s->tim_dmar;
     case TIM_OR:
         return s->tim_or;
+    default:
+        qemu_log_mask(LOG_GUEST_ERROR,
+                      "net_timer2_5_write: Bad offset %x\n", (int) offset);
     }
 
     return 0;
 }
 
-static void netduino_timer_write(void *opaque, hwaddr offset,
+static void stn32f405xx_timer_write(void *opaque, hwaddr offset,
                         uint64_t val64, unsigned size)
 {
-    NETTIMERState *s = (NETTIMERState *)opaque;
+    NetTimer *s = (NetTimer *)opaque;
     uint32_t value = (uint32_t) val64;
 
-    DPRINTF("Write 0x%x, 0x%x\n", value, (uint) offset);
+    DB_PRINT("Write 0x%x, 0x%x\n", value, (uint) offset);
 
     switch (offset) {
     case TIM_CR1:
@@ -233,7 +239,7 @@ static void netduino_timer_write(void *opaque, hwaddr offset,
         return;
     case TIM_SR:
         s->tim_sr &= value;
-        netduino_timer_set_alarm(s);
+        stn32f405xx_timer_set_alarm(s);
         return;
     case TIM_EGR:
         s->tim_egr = value;
@@ -249,14 +255,14 @@ static void netduino_timer_write(void *opaque, hwaddr offset,
         return;
     case TIM_CNT:
         s->tim_cnt = value;
-        netduino_timer_set_alarm(s);
+        stn32f405xx_timer_set_alarm(s);
         return;
     case TIM_PSC:
         s->tim_psc = value;
         return;
     case TIM_ARR:
         s->tim_arr = value;
-        netduino_timer_set_alarm(s);
+        stn32f405xx_timer_set_alarm(s);
         return;
     case TIM_CCR1:
         s->tim_ccr1 = value;
@@ -279,106 +285,106 @@ static void netduino_timer_write(void *opaque, hwaddr offset,
     case TIM_OR:
         s->tim_or = value;
         return;
+    default:
+        qemu_log_mask(LOG_GUEST_ERROR,
+                      "net_timer2_5_write: Bad offset %x\n", (int) offset);
     }
 }
 
-static const MemoryRegionOps netduino_timer_ops = {
-    .read = netduino_timer_read,
-    .write = netduino_timer_write,
+static const MemoryRegionOps stn32f405xx_timer_ops = {
+    .read = stn32f405xx_timer_read,
+    .write = stn32f405xx_timer_write,
     .endianness = DEVICE_NATIVE_ENDIAN,
 };
 
-static int netduino_timer_init(SysBusDevice *dev)
+static void stn32f405xx_timer_init(Object *obj)
 {
-    NETTIMERState *s = NETTIMER(dev);
+    NetTimer *s = STM32F405xxTIMER(obj);
     struct tm tm;
 
-    sysbus_init_irq(dev, &s->irq);
+    sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
-    memory_region_init_io(&s->iomem, OBJECT(s), &netduino_timer_ops, s,
-                          "netduino_timer", 0x2000);
-    sysbus_init_mmio(dev, &s->iomem);
+    memory_region_init_io(&s->iomem, obj, &stn32f405xx_timer_ops, s,
+                          "stn32f405xx_timer", 0x2000);
+    sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->iomem);
 
     qemu_get_timedate(&tm, 0);
     s->tick_offset = mktimegm(&tm) -
         qemu_clock_get_ns(rtc_clock) / get_ticks_per_sec();
 
-    s->timer = timer_new_ns(rtc_clock, netduino_timer_interrupt, s);
-
-    return 0;
+    s->timer = timer_new_ns(rtc_clock, stn32f405xx_timer_interrupt, s);
 }
 
-static void netduino_timer_pre_save(void *opaque)
+static void stn32f405xx_timer_pre_save(void *opaque)
 {
-    NETTIMERState *s = (NETTIMERState *)opaque;
+    NetTimer *s = (NetTimer *)opaque;
 
     int64_t delta = qemu_clock_get_ns(rtc_clock) -
                     qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
     s->tick_offset_vmstate = s->tick_offset + delta / get_ticks_per_sec();
 }
 
-static int netduino_timer_post_load(void *opaque, int version_id)
+static int stn32f405xx_timer_post_load(void *opaque, int version_id)
 {
-    NETTIMERState *s = (NETTIMERState *)opaque;
+    NetTimer *s = (NetTimer *)opaque;
 
     int64_t delta = qemu_clock_get_ns(rtc_clock) -
                     qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
     s->tick_offset = s->tick_offset_vmstate - delta / get_ticks_per_sec();
-    netduino_timer_set_alarm(s);
+    stn32f405xx_timer_set_alarm(s);
     return 0;
 }
 
-static const VMStateDescription vmstate_netduino_timer = {
-    .name = "netduino_timer",
+static const VMStateDescription vmstate_stn32f405xx_timer = {
+    .name = "stn32f405xx_timer",
     .version_id = 1,
     .minimum_version_id = 1,
-    .pre_save = netduino_timer_pre_save,
-    .post_load = netduino_timer_post_load,
+    .pre_save = stn32f405xx_timer_pre_save,
+    .post_load = stn32f405xx_timer_post_load,
     .fields = (VMStateField[]) {
-        VMSTATE_UINT32(tick_offset_vmstate, NETTIMERState),
-        VMSTATE_UINT32(tim_cr1, NETTIMERState),
-        VMSTATE_UINT32(tim_cr2, NETTIMERState),
-        VMSTATE_UINT32(tim_smcr, NETTIMERState),
-        VMSTATE_UINT32(tim_dier, NETTIMERState),
-        VMSTATE_UINT32(tim_sr, NETTIMERState),
-        VMSTATE_UINT32(tim_egr, NETTIMERState),
-        VMSTATE_UINT32(tim_ccmr1, NETTIMERState),
-        VMSTATE_UINT32(tim_ccmr1, NETTIMERState),
-        VMSTATE_UINT32(tim_ccer, NETTIMERState),
-        VMSTATE_UINT32(tim_cnt, NETTIMERState),
-        VMSTATE_UINT32(tim_psc, NETTIMERState),
-        VMSTATE_UINT32(tim_arr, NETTIMERState),
-        VMSTATE_UINT32(tim_ccr1, NETTIMERState),
-        VMSTATE_UINT32(tim_ccr2, NETTIMERState),
-        VMSTATE_UINT32(tim_ccr3, NETTIMERState),
-        VMSTATE_UINT32(tim_ccr4, NETTIMERState),
-        VMSTATE_UINT32(tim_dcr, NETTIMERState),
-        VMSTATE_UINT32(tim_dmar, NETTIMERState),
-        VMSTATE_UINT32(tim_or, NETTIMERState),
+        VMSTATE_UINT32(tick_offset_vmstate, NetTimer),
+        VMSTATE_UINT32(tim_cr1, NetTimer),
+        VMSTATE_UINT32(tim_cr2, NetTimer),
+        VMSTATE_UINT32(tim_smcr, NetTimer),
+        VMSTATE_UINT32(tim_dier, NetTimer),
+        VMSTATE_UINT32(tim_sr, NetTimer),
+        VMSTATE_UINT32(tim_egr, NetTimer),
+        VMSTATE_UINT32(tim_ccmr1, NetTimer),
+        VMSTATE_UINT32(tim_ccmr1, NetTimer),
+        VMSTATE_UINT32(tim_ccer, NetTimer),
+        VMSTATE_UINT32(tim_cnt, NetTimer),
+        VMSTATE_UINT32(tim_psc, NetTimer),
+        VMSTATE_UINT32(tim_arr, NetTimer),
+        VMSTATE_UINT32(tim_ccr1, NetTimer),
+        VMSTATE_UINT32(tim_ccr2, NetTimer),
+        VMSTATE_UINT32(tim_ccr3, NetTimer),
+        VMSTATE_UINT32(tim_ccr4, NetTimer),
+        VMSTATE_UINT32(tim_dcr, NetTimer),
+        VMSTATE_UINT32(tim_dmar, NetTimer),
+        VMSTATE_UINT32(tim_or, NetTimer),
         VMSTATE_END_OF_LIST()
     }
 };
 
-static void netduino_timer_class_init(ObjectClass *klass, void *data)
+static void stn32f405xx_timer_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
-    SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
-    k->init = netduino_timer_init;
-    dc->vmsd = &vmstate_netduino_timer;
-    dc->reset = netduino_timer_reset;
+    dc->vmsd = &vmstate_stn32f405xx_timer;
+    dc->reset = stn32f405xx_timer_reset;
 }
 
-static const TypeInfo netduino_timer_info = {
-    .name          = TYPE_NETTIMER,
+static const TypeInfo stn32f405xx_timer_info = {
+    .name          = TYPE_STM32F405xxTIMER,
     .parent        = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(NETTIMERState),
-    .class_init    = netduino_timer_class_init,
+    .instance_size = sizeof(NetTimer),
+    .instance_init = stn32f405xx_timer_init,
+    .class_init    = stn32f405xx_timer_class_init,
 };
 
-static void netduino_timer_register_types(void)
+static void stn32f405xx_timer_register_types(void)
 {
-    type_register_static(&netduino_timer_info);
+    type_register_static(&stn32f405xx_timer_info);
 }
 
-type_init(netduino_timer_register_types)
+type_init(stn32f405xx_timer_register_types)
