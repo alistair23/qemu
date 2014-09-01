@@ -1,5 +1,5 @@
 /*
- * Netduino Plus 2 USART
+ * STM32F405xx Plus 2 USART
  *
  * Copyright (c) 2014 Alistair Francis <alistair@alistair23.me>
  *
@@ -26,14 +26,17 @@
 #include "sysemu/char.h"
 #include "hw/hw.h"
 
-/* #define DEBUG_NETUSART */
-
-#ifdef DEBUG_NETUSART
-#define DPRINTF(fmt, ...) \
-do { printf("netduino_usart: " fmt , ## __VA_ARGS__); } while (0)
-#else
-#define DPRINTF(fmt, ...) do {} while (0)
+#ifndef ST_USART_ERR_DEBUG
+#define ST_USART_ERR_DEBUG 0
 #endif
+
+#define DB_PRINT_L(lvl, fmt, args...) do { \
+    if (ST_USART_ERR_DEBUG >= lvl) { \
+        fprintf(stderr, "stn32f405xx_usart: %s:" fmt, __func__, ## args); \
+    } \
+} while (0);
+
+#define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
 
 #define USART_SR   0x00
 #define USART_DR   0x04
@@ -51,11 +54,11 @@ do { printf("netduino_usart: " fmt , ## __VA_ARGS__); } while (0)
 #define USART_CR1_RXNEIE  (1 << 5)
 #define USART_CR1_TE  (1 << 3)
 
-#define TYPE_NETDUINO_USART "netduino_usart"
-#define NETDUINO_USART(obj) \
-    OBJECT_CHECK(struct net_usart, (obj), TYPE_NETDUINO_USART)
+#define TYPE_STM32F405xx_USART "stn32f405xx-usart"
+#define STM32F405xx_USART(obj) \
+    OBJECT_CHECK(NetUsart, (obj), TYPE_STM32F405xx_USART)
 
-struct net_usart {
+typedef struct {
     SysBusDevice parent_obj;
 
     MemoryRegion mmio;
@@ -70,11 +73,11 @@ struct net_usart {
 
     CharDriverState *chr;
     qemu_irq irq;
-};
+} NetUsart;
 
 static int usart_can_receive(void *opaque)
 {
-    struct net_usart *s = opaque;
+    NetUsart *s = opaque;
 
     if (s->usart_cr1 & USART_CR1_UE && s->usart_cr1 & USART_CR1_TE) {
         return 1;
@@ -85,15 +88,9 @@ static int usart_can_receive(void *opaque)
 
 static void usart_receive(void *opaque, const uint8_t *buf, int size)
 {
-    struct net_usart *s = opaque;
-    int i, num;
+    NetUsart *s = opaque;
 
-    num = size > 8 ? 8 : size;
-    s->usart_dr = 0;
-
-    for (i = 0; i < num; i++) {
-        s->usart_dr |= (buf[i] << i);
-    }
+    s->usart_dr = *buf;
 
     s->usart_sr |= USART_SR_RXNE;
 
@@ -101,12 +98,12 @@ static void usart_receive(void *opaque, const uint8_t *buf, int size)
         qemu_set_irq(s->irq, 1);
     }
 
-    DPRINTF("Inputting: %c\n", s->usart_dr);
+    DB_PRINT("Receiving: %c\n", s->usart_dr);
 }
 
 static void usart_reset(DeviceState *dev)
 {
-    struct net_usart *s = NETDUINO_USART(dev);
+    NetUsart *s = STM32F405xx_USART(dev);
 
     s->usart_sr = 0x00C00000;
     s->usart_dr = 0x00000000;
@@ -117,13 +114,13 @@ static void usart_reset(DeviceState *dev)
     s->usart_gtpr = 0x00000000;
 }
 
-static uint64_t netduino_usart_read(void *opaque, hwaddr addr,
+static uint64_t stn32f405xx_usart_read(void *opaque, hwaddr addr,
                                     unsigned int size)
 {
-    struct net_usart *s = opaque;
+    NetUsart *s = opaque;
     uint64_t retvalue;
 
-    DPRINTF("Read 0x%x\n", (uint) addr);
+    DB_PRINT("Read 0x%x\n", (uint) addr);
 
     switch (addr) {
     case USART_SR:
@@ -131,7 +128,7 @@ static uint64_t netduino_usart_read(void *opaque, hwaddr addr,
         s->usart_sr &= (USART_SR_TC ^ 0xFFFF);
         return retvalue;
     case USART_DR:
-        DPRINTF("Value: %x, %c\n", s->usart_dr, s->usart_dr);
+        DB_PRINT("Value: 0x%x, %c\n", s->usart_dr, (char) s->usart_dr);
         s->usart_sr |= USART_SR_TXE;
         return s->usart_dr & 0x3FF;
     case USART_BRR:
@@ -153,14 +150,14 @@ static uint64_t netduino_usart_read(void *opaque, hwaddr addr,
     return 0;
 }
 
-static void netduino_usart_write(void *opaque, hwaddr addr,
+static void stn32f405xx_usart_write(void *opaque, hwaddr addr,
                        uint64_t val64, unsigned int size)
 {
-    struct net_usart *s = opaque;
+    NetUsart *s = opaque;
     uint32_t value = (uint32_t) val64;
     unsigned char ch;
 
-    DPRINTF("Write 0x%x, 0x%x\n", value, (uint) addr);
+    DB_PRINT("Write 0x%x, 0x%x\n", value, (uint) addr);
 
     switch (addr) {
     case USART_SR:
@@ -200,22 +197,21 @@ static void netduino_usart_write(void *opaque, hwaddr addr,
     }
 }
 
-static const MemoryRegionOps netduino_usart_ops = {
-    .read = netduino_usart_read,
-    .write = netduino_usart_write,
+static const MemoryRegionOps stn32f405xx_usart_ops = {
+    .read = stn32f405xx_usart_read,
+    .write = stn32f405xx_usart_write,
     .endianness = DEVICE_NATIVE_ENDIAN,
 };
 
-static int netduino_usart_init(SysBusDevice *sbd)
+static void stn32f405xx_usart_init(Object *obj)
 {
-    DeviceState *dev = DEVICE(sbd);
-    struct net_usart *s = NETDUINO_USART(dev);
+    NetUsart *s = STM32F405xx_USART(obj);
 
-    sysbus_init_irq(sbd, &s->irq);
+    sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
-    memory_region_init_io(&s->mmio, OBJECT(s), &netduino_usart_ops, s,
-                          TYPE_NETDUINO_USART, 0x2000);
-    sysbus_init_mmio(sbd, &s->mmio);
+    memory_region_init_io(&s->mmio, obj, &stn32f405xx_usart_ops, s,
+                          TYPE_STM32F405xx_USART, 0x2000);
+    sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->mmio);
 
     s->chr = qemu_char_get_next_serial();
 
@@ -223,30 +219,26 @@ static int netduino_usart_init(SysBusDevice *sbd)
         qemu_chr_add_handlers(s->chr, usart_can_receive, usart_receive,
                               NULL, s);
     }
-
-    return 0;
 }
 
-static void netduino_usart_class_init(ObjectClass *klass, void *data)
+static void stn32f405xx_usart_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
-    SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
-    k->init = netduino_usart_init;
-    dc->props = NULL;
     dc->reset = usart_reset;
 }
 
-static const TypeInfo netduino_usart_info = {
-    .name          = TYPE_NETDUINO_USART,
+static const TypeInfo stn32f405xx_usart_info = {
+    .name          = TYPE_STM32F405xx_USART,
     .parent        = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(struct net_usart),
-    .class_init    = netduino_usart_class_init,
+    .instance_size = sizeof(NetUsart),
+    .instance_init = stn32f405xx_usart_init,
+    .class_init    = stn32f405xx_usart_class_init,
 };
 
-static void netduino_usart_register_types(void)
+static void stn32f405xx_usart_register_types(void)
 {
-    type_register_static(&netduino_usart_info);
+    type_register_static(&stn32f405xx_usart_info);
 }
 
-type_init(netduino_usart_register_types)
+type_init(stn32f405xx_usart_register_types)
