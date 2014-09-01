@@ -1,5 +1,5 @@
 /*
- * Netduino Plus 2 GPIO
+ * STM32F405xx Plus 2 GPIO
  *
  * Copyright (c) 2014 Alistair Francis <alistair@alistair23.me>
  *
@@ -24,14 +24,17 @@
 
 #include "hw/sysbus.h"
 
-/* #define DEBUG_NETGPIO */
-
-#ifdef DEBUG_NETGPIO
-#define DPRINTF(fmt, ...) \
-do { printf("netduino_gpio: " fmt , ## __VA_ARGS__); } while (0)
-#else
-#define DPRINTF(fmt, ...) do {} while (0)
+#ifndef ST_GPIO_ERR_DEBUG
+#define ST_GPIO_ERR_DEBUG 0
 #endif
+
+#define DB_PRINT_L(lvl, fmt, args...) do { \
+    if (ST_GPIO_ERR_DEBUG >= lvl) { \
+        fprintf(stderr, "stn32f405xx_gpio: %s:" fmt, __func__, ## args); \
+    } \
+} while (0);
+
+#define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
 
 #define GPIO_MODER     0x00
 #define GPIO_OTYPER    0x04
@@ -50,11 +53,11 @@ do { printf("netduino_gpio: " fmt , ## __VA_ARGS__); } while (0)
 #define GPIO_MODER_ALT         2
 #define GPIO_MODER_ANALOG      3
 
-#define TYPE_NETDUINO_GPIO "netduino_gpio"
-#define NETDUINO_GPIO(obj) OBJECT_CHECK(NETDUINO_GPIOState, (obj), \
-                           TYPE_NETDUINO_GPIO)
+#define TYPE_STM32F405xx_GPIO "stn32f405xx-gpio"
+#define STM32F405xx_GPIO(obj) OBJECT_CHECK(STM32F405xx_GPIOState, (obj), \
+                           TYPE_STM32F405xx_GPIO)
 
-typedef struct NETDUINO_GPIOState {
+typedef struct STGPIOState {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
@@ -80,30 +83,30 @@ typedef struct NETDUINO_GPIOState {
 
     qemu_irq irq;
     const unsigned char *id;
-} NETDUINO_GPIOState;
+} STM32F405xx_GPIOState;
 
-static const VMStateDescription vmstate_netduino_gpio = {
-    .name = "netduino_gpio",
+static const VMStateDescription vmstate_stn32f405xx_gpio = {
+    .name = "stn32f405xx_gpio",
     .version_id = 1,
     .minimum_version_id = 1,
     .fields = (VMStateField[]) {
-        VMSTATE_UINT32(gpio_moder, NETDUINO_GPIOState),
-        VMSTATE_UINT32(gpio_otyper, NETDUINO_GPIOState),
-        VMSTATE_UINT32(gpio_ospeedr, NETDUINO_GPIOState),
-        VMSTATE_UINT32(gpio_pupdr, NETDUINO_GPIOState),
-        VMSTATE_UINT32(gpio_idr, NETDUINO_GPIOState),
-        VMSTATE_UINT32(gpio_odr, NETDUINO_GPIOState),
-        VMSTATE_UINT32(gpio_bsrr, NETDUINO_GPIOState),
-        VMSTATE_UINT32(gpio_lckr, NETDUINO_GPIOState),
-        VMSTATE_UINT32(gpio_afrl, NETDUINO_GPIOState),
-        VMSTATE_UINT32(gpio_afrh, NETDUINO_GPIOState),
+        VMSTATE_UINT32(gpio_moder, STM32F405xx_GPIOState),
+        VMSTATE_UINT32(gpio_otyper, STM32F405xx_GPIOState),
+        VMSTATE_UINT32(gpio_ospeedr, STM32F405xx_GPIOState),
+        VMSTATE_UINT32(gpio_pupdr, STM32F405xx_GPIOState),
+        VMSTATE_UINT32(gpio_idr, STM32F405xx_GPIOState),
+        VMSTATE_UINT32(gpio_odr, STM32F405xx_GPIOState),
+        VMSTATE_UINT32(gpio_bsrr, STM32F405xx_GPIOState),
+        VMSTATE_UINT32(gpio_lckr, STM32F405xx_GPIOState),
+        VMSTATE_UINT32(gpio_afrl, STM32F405xx_GPIOState),
+        VMSTATE_UINT32(gpio_afrh, STM32F405xx_GPIOState),
         VMSTATE_END_OF_LIST()
     }
 };
 
 static void gpio_reset(DeviceState *dev)
 {
-    NETDUINO_GPIOState *s = NETDUINO_GPIO(dev);
+    STM32F405xx_GPIOState *s = STM32F405xx_GPIO(dev);
 
     if (s->gpio_letter == 'a') {
         s->gpio_moder = 0xA8000000;
@@ -129,12 +132,12 @@ static void gpio_reset(DeviceState *dev)
     s->gpio_direction = 0x0000;
 }
 
-static uint64_t netduino_gpio_read(void *opaque, hwaddr offset,
+static uint64_t stn32f405xx_gpio_read(void *opaque, hwaddr offset,
                            unsigned size)
 {
-    NETDUINO_GPIOState *s = (NETDUINO_GPIOState *)opaque;
+    STM32F405xx_GPIOState *s = (STM32F405xx_GPIOState *)opaque;
 
-    DPRINTF("Read 0x%x\n", (uint) offset);
+    DB_PRINT("Read 0x%x\n", (uint) offset);
 
     switch (offset) {
     case GPIO_MODER:
@@ -166,13 +169,13 @@ static uint64_t netduino_gpio_read(void *opaque, hwaddr offset,
     return 0;
 }
 
-static void netduino_gpio_write(void *opaque, hwaddr offset,
+static void stn32f405xx_gpio_write(void *opaque, hwaddr offset,
                         uint64_t value, unsigned size)
 {
-    NETDUINO_GPIOState *s = (NETDUINO_GPIOState *)opaque;
+    STM32F405xx_GPIOState *s = (STM32F405xx_GPIOState *)opaque;
     int i, mask;
 
-    DPRINTF("Write 0x%x, 0x%x\n", (uint) value, (uint) offset);
+    DB_PRINT("Write 0x%x, 0x%x\n", (uint) value, (uint) offset);
 
     switch (offset) {
     case GPIO_MODER:
@@ -212,7 +215,7 @@ static void netduino_gpio_write(void *opaque, hwaddr offset,
         /* Reset the output value */
         s->gpio_odr &= (uint32_t) (value ^ 0xFFFF);
         s->gpio_bsrr = (uint32_t) (value << 16);
-        DPRINTF("Output: 0x%x\n", s->gpio_odr);
+        DB_PRINT("Output: 0x%x\n", s->gpio_odr);
         return;
     case GPIO_BSRR:
         /* Reset the output value */
@@ -220,7 +223,7 @@ static void netduino_gpio_write(void *opaque, hwaddr offset,
         /* Sets the output value */
         s->gpio_odr |= (uint32_t) (value & 0xFFFF);
         s->gpio_bsrr = (uint32_t) value;
-        DPRINTF("Output: 0x%x\n", s->gpio_odr);
+        DB_PRINT("Output: 0x%x\n", s->gpio_odr);
         return;
     case GPIO_LCKR:
         s->gpio_lckr = (uint32_t) value;
@@ -234,52 +237,49 @@ static void netduino_gpio_write(void *opaque, hwaddr offset,
     }
 }
 
-static const MemoryRegionOps netduino_gpio_ops = {
-    .read = netduino_gpio_read,
-    .write = netduino_gpio_write,
+static const MemoryRegionOps stn32f405xx_gpio_ops = {
+    .read = stn32f405xx_gpio_read,
+    .write = stn32f405xx_gpio_write,
     .endianness = DEVICE_NATIVE_ENDIAN,
 };
 
 static Property net_gpio_properties[] = {
-    DEFINE_PROP_UINT8("gpio-letter", NETDUINO_GPIOState, gpio_letter,
+    DEFINE_PROP_UINT8("gpio-letter", STM32F405xx_GPIOState, gpio_letter,
                       (uint) 'a'),
     DEFINE_PROP_END_OF_LIST(),
 };
 
 
-static int netduino_gpio_initfn(SysBusDevice *sbd)
+static void stn32f405xx_gpio_initfn(Object *obj)
 {
-    DeviceState *dev = DEVICE(sbd);
-    NETDUINO_GPIOState *s = NETDUINO_GPIO(dev);
+    STM32F405xx_GPIOState *s = STM32F405xx_GPIO(obj);
 
-    memory_region_init_io(&s->iomem, OBJECT(s), &netduino_gpio_ops, s,
-                          "netduino_gpio", 0x2000);
-    sysbus_init_mmio(sbd, &s->iomem);
-    sysbus_init_irq(sbd, &s->irq);
-    return 0;
+    memory_region_init_io(&s->iomem, obj, &stn32f405xx_gpio_ops, s,
+                          "stn32f405xx_gpio", 0x2000);
+    sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->iomem);
+    sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 }
 
-static void netduino_gpio_class_init(ObjectClass *klass, void *data)
+static void stn32f405xx_gpio_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
-    SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
-    k->init = netduino_gpio_initfn;
-    dc->vmsd = &vmstate_netduino_gpio;
+    dc->vmsd = &vmstate_stn32f405xx_gpio;
     dc->props = net_gpio_properties;
     dc->reset = gpio_reset;
 }
 
-static const TypeInfo netduino_gpio_info = {
-    .name          = TYPE_NETDUINO_GPIO,
+static const TypeInfo stn32f405xx_gpio_info = {
+    .name          = TYPE_STM32F405xx_GPIO,
     .parent        = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(NETDUINO_GPIOState),
-    .class_init    = netduino_gpio_class_init,
+    .instance_size = sizeof(STM32F405xx_GPIOState),
+    .instance_init = stn32f405xx_gpio_initfn,
+    .class_init    = stn32f405xx_gpio_class_init,
 };
 
-static void netduino_gpio_register_types(void)
+static void stn32f405xx_gpio_register_types(void)
 {
-    type_register_static(&netduino_gpio_info);
+    type_register_static(&stn32f405xx_gpio_info);
 }
 
-type_init(netduino_gpio_register_types)
+type_init(stn32f405xx_gpio_register_types)
