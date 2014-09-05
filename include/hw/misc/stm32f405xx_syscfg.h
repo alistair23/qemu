@@ -22,6 +22,9 @@
  * THE SOFTWARE.
  */
 
+#ifndef HW_ST_SYSCFG_H
+#define HW_ST_SYSCFG_H
+
 #include "hw/sysbus.h"
 #include "hw/hw.h"
 
@@ -77,3 +80,5 @@ static void syscfg_reset(DeviceState *dev)
     s->syscfg_exticr4 = 0x00000000;
     s->syscfg_cmpcr = 0x00000000;
 }
+
+#endif

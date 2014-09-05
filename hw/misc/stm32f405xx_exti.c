@@ -24,6 +24,7 @@
 
 #include "hw/sysbus.h"
 #include "hw/hw.h"
+#include "hw/misc/stm32f405xx_syscfg.h"
 
 #ifndef ST_EXTI_ERR_DEBUG
 #define ST_EXTI_ERR_DEBUG 1
@@ -51,10 +52,6 @@
 #define TYPE_STM32F405xx_EXTI "stm32f405xx-exti"
 #define STM32F405xx_EXTI(obj) \
     OBJECT_CHECK(STM32F405Exti, (obj), TYPE_STM32F405xx_EXTI)
-
-#define TYPE_STM32F405xx_SYSCFG "stm32f405xx-syscfg"
-#define STM32F405xx_SYSCFG(obj) \
-    OBJECT_CHECK(Stn32f405Syscfg, (obj), TYPE_STM32F405xx_SYSCFG)
 
 typedef struct {
     SysBusDevice parent_obj;
@@ -88,10 +85,52 @@ static void exti_set_irq(void * opaque, int irq, int level)
     STM32F405Exti *s = opaque;
     DeviceState *syscfg = NULL;
 
-    syscfg = qdev_find_recursive(sysbus_get_default(),
-                                 qemu_opt_get(opts, "stm32f405xx-syscfg"));
+    /* I don't like this at all */
 
-    STM32F405xx_SYSCFG(syscfg);
+    syscfg = qdev_find_recursive(sysbus_get_default(),
+                                 "stm32f405xx-syscfg");
+
+    Stn32f405Syscfg *s_slave = STM32F405xx_SYSCFG(syscfg);
+
+    if (s_slave->syscfg_exticr1 & 0xFF) {
+        qemu_irq_pulse(s->irq[0]);
+    } else if (s_slave->syscfg_exticr1 & 0xFF00) {
+        qemu_irq_pulse(s->irq[1]);
+    } else if (s_slave->syscfg_exticr1 & 0xFF0000) {
+        qemu_irq_pulse(s->irq[2]);
+    } else if (s_slave->syscfg_exticr1 & 0xFF000000) {
+        qemu_irq_pulse(s->irq[3]);
+    }
+
+    if (s_slave->syscfg_exticr2 & 0xFF) {
+        qemu_irq_pulse(s->irq[4]);
+    } else if (s_slave->syscfg_exticr2 & 0xFF00) {
+        qemu_irq_pulse(s->irq[5]);
+    } else if (s_slave->syscfg_exticr2 & 0xFF0000) {
+        qemu_irq_pulse(s->irq[6]);
+    } else if (s_slave->syscfg_exticr2 & 0xFF000000) {
+        qemu_irq_pulse(s->irq[7]);
+    }
+
+    if (s_slave->syscfg_exticr3 & 0xFF) {
+        qemu_irq_pulse(s->irq[8]);
+    } else if (s_slave->syscfg_exticr3 & 0xFF00) {
+        qemu_irq_pulse(s->irq[9]);
+    } else if (s_slave->syscfg_exticr3 & 0xFF0000) {
+        qemu_irq_pulse(s->irq[10]);
+    } else if (s_slave->syscfg_exticr3 & 0xFF000000) {
+        qemu_irq_pulse(s->irq[11]);
+    }
+
+    if (s_slave->syscfg_exticr4 & 0xFF) {
+        qemu_irq_pulse(s->irq[12]);
+    } else if (s_slave->syscfg_exticr4 & 0xFF00) {
+        qemu_irq_pulse(s->irq[13]);
+    } else if (s_slave->syscfg_exticr4 & 0xFF0000) {
+        qemu_irq_pulse(s->irq[14]);
+    } else if (s_slave->syscfg_exticr4 & 0xFF000000) {
+        qemu_irq_pulse(s->irq[15]);
+    }
 
     DB_PRINT("Interrupt In\n");
 }

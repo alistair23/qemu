@@ -22,6 +22,8 @@
  * THE SOFTWARE.
  */
 
+#include "hw/misc/stm32f405xx_syscfg.h"
+
 static uint64_t stm32f405xx_syscfg_read(void *opaque, hwaddr addr,
                                      unsigned int size)
 {

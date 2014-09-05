@@ -132,8 +132,14 @@ static void netduinoplus2_init(MachineState *machine)
     }
 
     /* System configuration controller */
-    sysbus_create_simple("stm32f405xx-syscfg", 0x40013800,
-                         pic[71]);
+    /* sysbus_create_simple("stm32f405xx-syscfg", 0x40013800,
+                         pic[71]); */
+    dev = qdev_create(NULL, "stm32f405xx-syscfg");
+    dev->id = "stm32f405xx-syscfg";
+    qdev_init_nofail(dev);
+    busdev = SYS_BUS_DEVICE(dev);
+    sysbus_mmio_map(busdev, 0, 0x40013800);
+    sysbus_connect_irq(busdev, 0, pic[71]);
 
     /* Attach a UART (uses USART registers) and USART controllers */
     for (i = 0; i < 7; i++) {
