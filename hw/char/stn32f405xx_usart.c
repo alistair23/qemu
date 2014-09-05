@@ -1,5 +1,5 @@
 /*
- * STM32F405xx Plus 2 USART
+ * STM32F405xx USART
  *
  * Copyright (c) 2014 Alistair Francis <alistair@alistair23.me>
  *
@@ -56,7 +56,7 @@
 
 #define TYPE_STM32F405xx_USART "stn32f405xx-usart"
 #define STM32F405xx_USART(obj) \
-    OBJECT_CHECK(NetUsart, (obj), TYPE_STM32F405xx_USART)
+    OBJECT_CHECK(stn32f405Usart, (obj), TYPE_STM32F405xx_USART)
 
 typedef struct {
     SysBusDevice parent_obj;
@@ -73,11 +73,11 @@ typedef struct {
 
     CharDriverState *chr;
     qemu_irq irq;
-} NetUsart;
+} stn32f405Usart;
 
 static int usart_can_receive(void *opaque)
 {
-    NetUsart *s = opaque;
+    stn32f405Usart *s = opaque;
 
     if (s->usart_cr1 & USART_CR1_UE && s->usart_cr1 & USART_CR1_TE) {
         return 1;
@@ -88,7 +88,7 @@ static int usart_can_receive(void *opaque)
 
 static void usart_receive(void *opaque, const uint8_t *buf, int size)
 {
-    NetUsart *s = opaque;
+    stn32f405Usart *s = opaque;
 
     s->usart_dr = *buf;
 
@@ -103,7 +103,7 @@ static void usart_receive(void *opaque, const uint8_t *buf, int size)
 
 static void usart_reset(DeviceState *dev)
 {
-    NetUsart *s = STM32F405xx_USART(dev);
+    stn32f405Usart *s = STM32F405xx_USART(dev);
 
     s->usart_sr = 0x00C00000;
     s->usart_dr = 0x00000000;
@@ -117,7 +117,7 @@ static void usart_reset(DeviceState *dev)
 static uint64_t stn32f405xx_usart_read(void *opaque, hwaddr addr,
                                     unsigned int size)
 {
-    NetUsart *s = opaque;
+    stn32f405Usart *s = opaque;
     uint64_t retvalue;
 
     DB_PRINT("Read 0x%x\n", (uint) addr);
@@ -143,7 +143,7 @@ static uint64_t stn32f405xx_usart_read(void *opaque, hwaddr addr,
         return s->usart_gtpr;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "net_usart_read: Bad offset %x\n", (int)addr);
+                      "STM32F405xx_usart_read: Bad offset %x\n", (int)addr);
         return 0;
     }
 
@@ -153,7 +153,7 @@ static uint64_t stn32f405xx_usart_read(void *opaque, hwaddr addr,
 static void stn32f405xx_usart_write(void *opaque, hwaddr addr,
                        uint64_t val64, unsigned int size)
 {
-    NetUsart *s = opaque;
+    stn32f405Usart *s = opaque;
     uint32_t value = (uint32_t) val64;
     unsigned char ch;
 
@@ -193,7 +193,7 @@ static void stn32f405xx_usart_write(void *opaque, hwaddr addr,
         return;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "net_usart_write: Bad offset %x\n", (int)addr);
+                      "STM32F405xx_usart_write: Bad offset %x\n", (int)addr);
     }
 }
 
@@ -205,7 +205,7 @@ static const MemoryRegionOps stn32f405xx_usart_ops = {
 
 static void stn32f405xx_usart_init(Object *obj)
 {
-    NetUsart *s = STM32F405xx_USART(obj);
+    stn32f405Usart *s = STM32F405xx_USART(obj);
 
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
@@ -231,7 +231,7 @@ static void stn32f405xx_usart_class_init(ObjectClass *klass, void *data)
 static const TypeInfo stn32f405xx_usart_info = {
     .name          = TYPE_STM32F405xx_USART,
     .parent        = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(NetUsart),
+    .instance_size = sizeof(stn32f405Usart),
     .instance_init = stn32f405xx_usart_init,
     .class_init    = stn32f405xx_usart_class_init,
 };

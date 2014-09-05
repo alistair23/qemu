@@ -1,5 +1,5 @@
 /*
- * STM32F405xx Plus 2 SYSCFG
+ * STM32F405xx SYSCFG
  *
  * Copyright (c) 2014 Alistair Francis <alistair@alistair23.me>
  *
@@ -23,12 +23,10 @@
  */
 
 #include "hw/sysbus.h"
-#include "sysemu/char.h"
 #include "hw/hw.h"
-#include "net/net.h"
 
 #ifndef ST_SYSCFG_ERR_DEBUG
-#define ST_SYSCFG_ERR_DEBUG 0
+#define ST_SYSCFG_ERR_DEBUG 1
 #endif
 
 #define DB_PRINT_L(lvl, fmt, args...) do { \
@@ -49,7 +47,7 @@
 
 #define TYPE_STM32F405xx_SYSCFG "stn32f405xx-syscfg"
 #define STM32F405xx_SYSCFG(obj) \
-    OBJECT_CHECK(NetSyscfg, (obj), TYPE_STM32F405xx_SYSCFG)
+    OBJECT_CHECK(Stn32f405Syscfg, (obj), TYPE_STM32F405xx_SYSCFG)
 
 typedef struct {
     SysBusDevice parent_obj;
@@ -65,11 +63,11 @@ typedef struct {
     uint32_t syscfg_cmpcr;
 
     qemu_irq irq;
-} NetSyscfg;
+} Stn32f405Syscfg;
 
 static void syscfg_reset(DeviceState *dev)
 {
-    NetSyscfg *s = STM32F405xx_SYSCFG(dev);
+    Stn32f405Syscfg *s = STM32F405xx_SYSCFG(dev);
 
     s->syscfg_memrmp = 0x00000000;
     s->syscfg_pmc = 0x00000000;
@@ -83,9 +81,9 @@ static void syscfg_reset(DeviceState *dev)
 static uint64_t stn32f405xx_syscfg_read(void *opaque, hwaddr addr,
                                      unsigned int size)
 {
-    NetSyscfg *s = opaque;
+    Stn32f405Syscfg *s = opaque;
 
-    DB_PRINT("Read 0x%x\n", (uint) addr);
+    DB_PRINT("0x%x\n", (uint) addr);
 
     switch (addr) {
     case SYSCFG_MEMRMP:
@@ -104,7 +102,7 @@ static uint64_t stn32f405xx_syscfg_read(void *opaque, hwaddr addr,
         return s->syscfg_cmpcr;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "net_syscfg_read: Bad offset %x\n", (int)addr);
+                      "STM32F405xx_syscfg_read: Bad offset %x\n", (int)addr);
         return 0;
     }
 
@@ -114,20 +112,20 @@ static uint64_t stn32f405xx_syscfg_read(void *opaque, hwaddr addr,
 static void stn32f405xx_syscfg_write(void *opaque, hwaddr addr,
                        uint64_t val64, unsigned int size)
 {
-    NetSyscfg *s = opaque;
+    Stn32f405Syscfg *s = opaque;
     uint32_t value = (uint32_t) val64;
 
-    DB_PRINT("Write 0x%x, 0x%x\n", value, (uint) addr);
+    DB_PRINT("0x%x, 0x%x\n", value, (uint) addr);
 
     switch (addr) {
     case SYSCFG_MEMRMP:
         qemu_log_mask(LOG_UNIMP,
-                      "net_syscfg_write: Changeing the memory mapping " \
+                      "STM32F405xx_syscfg_write: Changeing the memory mapping " \
                       "isn't supported in QEMU\n");
         return;
     case SYSCFG_PMC:
         qemu_log_mask(LOG_UNIMP,
-                      "net_syscfg_write: Peripheral mode configuration " \
+                      "STM32F405xx_syscfg_write: Peripheral mode configuration " \
                       "isn't supported in QEMU\n");
         return;
     case SYSCFG_EXTICR1:
@@ -147,7 +145,7 @@ static void stn32f405xx_syscfg_write(void *opaque, hwaddr addr,
         return;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "net_syscfg_write: Bad offset %x\n", (int)addr);
+                      "STM32F405xx_syscfg_write: Bad offset %x\n", (int)addr);
     }
 }
 
@@ -159,7 +157,7 @@ static const MemoryRegionOps stn32f405xx_syscfg_ops = {
 
 static void stn32f405xx_syscfg_init(Object *obj)
 {
-    NetSyscfg *s = STM32F405xx_SYSCFG(obj);
+    Stn32f405Syscfg *s = STM32F405xx_SYSCFG(obj);
 
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
@@ -178,7 +176,7 @@ static void stn32f405xx_syscfg_class_init(ObjectClass *klass, void *data)
 static const TypeInfo stn32f405xx_syscfg_info = {
     .name          = TYPE_STM32F405xx_SYSCFG,
     .parent        = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(NetSyscfg),
+    .instance_size = sizeof(Stn32f405Syscfg),
     .instance_init = stn32f405xx_syscfg_init,
     .class_init    = stn32f405xx_syscfg_class_init,
 };

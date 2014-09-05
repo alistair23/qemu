@@ -1,5 +1,5 @@
 /*
- * STM32F405xx Plus 2 GPIO
+ * STM32F405xx GPIO
  *
  * Copyright (c) 2014 Alistair Francis <alistair@alistair23.me>
  *
@@ -54,7 +54,7 @@
 #define GPIO_MODER_ANALOG      3
 
 #define TYPE_STM32F405xx_GPIO "stn32f405xx-gpio"
-#define STM32F405xx_GPIO(obj) OBJECT_CHECK(STM32F405xx_GPIOState, (obj), \
+#define STM32F405xx_GPIO(obj) OBJECT_CHECK(STM32F405GPIOState, (obj), \
                            TYPE_STM32F405xx_GPIO)
 
 typedef struct STGPIOState {
@@ -73,8 +73,8 @@ typedef struct STGPIOState {
     uint32_t gpio_afrl;
     uint32_t gpio_afrh;
 
-    /* This is an internal QEMU Register, used to determine the
-     * GPIO direction as set by gpio_moder
+    /* This is an internal QEMU Register, used by QEMU to do operations on
+     * the GPIO direction as set by gpio_moder
      * 1: Input; 0: Output
      */
     uint16_t gpio_direction;
@@ -82,31 +82,32 @@ typedef struct STGPIOState {
     uint8_t gpio_letter;
 
     qemu_irq irq;
+    qemu_irq gpio_out[15];
     const unsigned char *id;
-} STM32F405xx_GPIOState;
+} STM32F405GPIOState;
 
 static const VMStateDescription vmstate_stn32f405xx_gpio = {
     .name = "stn32f405xx_gpio",
     .version_id = 1,
     .minimum_version_id = 1,
     .fields = (VMStateField[]) {
-        VMSTATE_UINT32(gpio_moder, STM32F405xx_GPIOState),
-        VMSTATE_UINT32(gpio_otyper, STM32F405xx_GPIOState),
-        VMSTATE_UINT32(gpio_ospeedr, STM32F405xx_GPIOState),
-        VMSTATE_UINT32(gpio_pupdr, STM32F405xx_GPIOState),
-        VMSTATE_UINT32(gpio_idr, STM32F405xx_GPIOState),
-        VMSTATE_UINT32(gpio_odr, STM32F405xx_GPIOState),
-        VMSTATE_UINT32(gpio_bsrr, STM32F405xx_GPIOState),
-        VMSTATE_UINT32(gpio_lckr, STM32F405xx_GPIOState),
-        VMSTATE_UINT32(gpio_afrl, STM32F405xx_GPIOState),
-        VMSTATE_UINT32(gpio_afrh, STM32F405xx_GPIOState),
+        VMSTATE_UINT32(gpio_moder, STM32F405GPIOState),
+        VMSTATE_UINT32(gpio_otyper, STM32F405GPIOState),
+        VMSTATE_UINT32(gpio_ospeedr, STM32F405GPIOState),
+        VMSTATE_UINT32(gpio_pupdr, STM32F405GPIOState),
+        VMSTATE_UINT32(gpio_idr, STM32F405GPIOState),
+        VMSTATE_UINT32(gpio_odr, STM32F405GPIOState),
+        VMSTATE_UINT32(gpio_bsrr, STM32F405GPIOState),
+        VMSTATE_UINT32(gpio_lckr, STM32F405GPIOState),
+        VMSTATE_UINT32(gpio_afrl, STM32F405GPIOState),
+        VMSTATE_UINT32(gpio_afrh, STM32F405GPIOState),
         VMSTATE_END_OF_LIST()
     }
 };
 
 static void gpio_reset(DeviceState *dev)
 {
-    STM32F405xx_GPIOState *s = STM32F405xx_GPIO(dev);
+    STM32F405GPIOState *s = STM32F405xx_GPIO(dev);
 
     if (s->gpio_letter == 'a') {
         s->gpio_moder = 0xA8000000;
@@ -135,7 +136,7 @@ static void gpio_reset(DeviceState *dev)
 static uint64_t stn32f405xx_gpio_read(void *opaque, hwaddr offset,
                            unsigned size)
 {
-    STM32F405xx_GPIOState *s = (STM32F405xx_GPIOState *)opaque;
+    STM32F405GPIOState *s = (STM32F405GPIOState *)opaque;
 
     DB_PRINT("Read 0x%x\n", (uint) offset);
 
@@ -154,10 +155,8 @@ static uint64_t stn32f405xx_gpio_read(void *opaque, hwaddr offset,
     case GPIO_ODR:
         return s->gpio_odr;
     case GPIO_BSRR_HIGH:
-        /* gpio_bsrr reads as zero */
-        return 0xFFFF;
+        return 0x0000;
     case GPIO_BSRR:
-        /* gpio_bsrr reads as zero */
         return 0x00000000;
     case GPIO_LCKR:
         return s->gpio_lckr;
@@ -169,10 +168,26 @@ static uint64_t stn32f405xx_gpio_read(void *opaque, hwaddr offset,
     return 0;
 }
 
+static void gpio_set_irq(void * opaque, int irq, int level)
+{
+    STM32F405GPIOState *s = (STM32F405GPIOState *)opaque;
+
+    DB_PRINT("Interrupt In\n");
+}
+
+static void gpio_set_outputs(STM32F405GPIOState *s)
+{
+    int i;
+
+    for (i = 0; i < 15; i++){
+        qemu_set_irq(s->gpio_out[i], s->gpio_odr & (1U << i) & (0xFFFF ^ s->gpio_direction));
+    }
+}
+
 static void stn32f405xx_gpio_write(void *opaque, hwaddr offset,
                         uint64_t value, unsigned size)
 {
-    STM32F405xx_GPIOState *s = (STM32F405xx_GPIOState *)opaque;
+    STM32F405GPIOState *s = (STM32F405GPIOState *)opaque;
     int i, mask;
 
     DB_PRINT("Write 0x%x, 0x%x\n", (uint) value, (uint) offset);
@@ -180,14 +195,14 @@ static void stn32f405xx_gpio_write(void *opaque, hwaddr offset,
     switch (offset) {
     case GPIO_MODER:
         s->gpio_moder = (uint32_t) value;
-        for (i = 0; i < 32; i = i + 2) {
+        for (i = 0; i < 15; i++) {
             /* Two bits determine the I/O direction/mode */
-            mask = (1 << i) + (1 << (i + 1));
+            mask = 3U << (i * 2);
 
             if ((s->gpio_moder & mask) == GPIO_MODER_INPUT) {
-                s->gpio_direction |= (1 << (i/2));
+                s->gpio_direction |= (1 << i);
             } else if ((s->gpio_moder & mask) == GPIO_MODER_GENERAL_OUT) {
-                s->gpio_direction &= (0xFFFF ^ (1 << (i/2)));
+                s->gpio_direction &= (0xFFFF ^ (1 << i));
             } else {
                 /* Not supported at the moment */
             }
@@ -205,28 +220,32 @@ static void stn32f405xx_gpio_write(void *opaque, hwaddr offset,
     case GPIO_IDR:
         /* Read Only Register */
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "net_gpio%c_write: Read Only Register 0x%x\n",
+                      "STM32F405xx_gpio%c_write: Read Only Register 0x%x\n",
                       s->gpio_letter, (int)offset);
         return;
     case GPIO_ODR:
         s->gpio_odr = ((uint32_t) value & (s->gpio_direction ^ 0xFFFF));
+        gpio_set_outputs(s);
         return;
     case GPIO_BSRR_HIGH:
         /* Reset the output value */
         s->gpio_odr &= (uint32_t) (value ^ 0xFFFF);
         s->gpio_bsrr = (uint32_t) (value << 16);
+        gpio_set_outputs(s);
         DB_PRINT("Output: 0x%x\n", s->gpio_odr);
         return;
     case GPIO_BSRR:
-        /* Reset the output value */
+        /* Top 16 bits are "write one to clear output" */
         s->gpio_odr &= (uint32_t) ((value >> 16) ^ 0xFFFF);
-        /* Sets the output value */
+        /* Bottom 16 bits are "write one to set output" */
         s->gpio_odr |= (uint32_t) (value & 0xFFFF);
         s->gpio_bsrr = (uint32_t) value;
+        gpio_set_outputs(s);
         DB_PRINT("Output: 0x%x\n", s->gpio_odr);
         return;
     case GPIO_LCKR:
         s->gpio_lckr = (uint32_t) value;
+        /* Unimplemented */
         return;
     case GPIO_AFRL:
         s->gpio_afrl = (uint32_t) value;
@@ -243,8 +262,8 @@ static const MemoryRegionOps stn32f405xx_gpio_ops = {
     .endianness = DEVICE_NATIVE_ENDIAN,
 };
 
-static Property net_gpio_properties[] = {
-    DEFINE_PROP_UINT8("gpio-letter", STM32F405xx_GPIOState, gpio_letter,
+static Property stm32f405_gpio_properties[] = {
+    DEFINE_PROP_UINT8("gpio-letter", STM32F405GPIOState, gpio_letter,
                       (uint) 'a'),
     DEFINE_PROP_END_OF_LIST(),
 };
@@ -252,12 +271,15 @@ static Property net_gpio_properties[] = {
 
 static void stn32f405xx_gpio_initfn(Object *obj)
 {
-    STM32F405xx_GPIOState *s = STM32F405xx_GPIO(obj);
+    STM32F405GPIOState *s = STM32F405xx_GPIO(obj);
 
     memory_region_init_io(&s->iomem, obj, &stn32f405xx_gpio_ops, s,
                           "stn32f405xx_gpio", 0x2000);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->iomem);
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
+
+    qdev_init_gpio_in(DEVICE(obj), gpio_set_irq, 15);
+    qdev_init_gpio_out(DEVICE(obj), s->gpio_out, 15);
 }
 
 static void stn32f405xx_gpio_class_init(ObjectClass *klass, void *data)
@@ -265,14 +287,14 @@ static void stn32f405xx_gpio_class_init(ObjectClass *klass, void *data)
     DeviceClass *dc = DEVICE_CLASS(klass);
 
     dc->vmsd = &vmstate_stn32f405xx_gpio;
-    dc->props = net_gpio_properties;
+    dc->props = stm32f405_gpio_properties;
     dc->reset = gpio_reset;
 }
 
 static const TypeInfo stn32f405xx_gpio_info = {
     .name          = TYPE_STM32F405xx_GPIO,
     .parent        = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(STM32F405xx_GPIOState),
+    .instance_size = sizeof(STM32F405GPIOState),
     .instance_init = stn32f405xx_gpio_initfn,
     .class_init    = stn32f405xx_gpio_class_init,
 };
