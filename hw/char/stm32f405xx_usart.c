@@ -32,7 +32,7 @@
 
 #define DB_PRINT_L(lvl, fmt, args...) do { \
     if (ST_USART_ERR_DEBUG >= lvl) { \
-        fprintf(stderr, "stn32f405xx_usart: %s:" fmt, __func__, ## args); \
+        fprintf(stderr, "stm32f405xx_usart: %s:" fmt, __func__, ## args); \
     } \
 } while (0);
 
@@ -54,7 +54,7 @@
 #define USART_CR1_RXNEIE  (1 << 5)
 #define USART_CR1_TE  (1 << 3)
 
-#define TYPE_STM32F405xx_USART "stn32f405xx-usart"
+#define TYPE_STM32F405xx_USART "stm32f405xx-usart"
 #define STM32F405xx_USART(obj) \
     OBJECT_CHECK(stn32f405Usart, (obj), TYPE_STM32F405xx_USART)
 
@@ -114,7 +114,7 @@ static void usart_reset(DeviceState *dev)
     s->usart_gtpr = 0x00000000;
 }
 
-static uint64_t stn32f405xx_usart_read(void *opaque, hwaddr addr,
+static uint64_t stm32f405xx_usart_read(void *opaque, hwaddr addr,
                                     unsigned int size)
 {
     stn32f405Usart *s = opaque;
@@ -150,7 +150,7 @@ static uint64_t stn32f405xx_usart_read(void *opaque, hwaddr addr,
     return 0;
 }
 
-static void stn32f405xx_usart_write(void *opaque, hwaddr addr,
+static void stm32f405xx_usart_write(void *opaque, hwaddr addr,
                        uint64_t val64, unsigned int size)
 {
     stn32f405Usart *s = opaque;
@@ -197,19 +197,19 @@ static void stn32f405xx_usart_write(void *opaque, hwaddr addr,
     }
 }
 
-static const MemoryRegionOps stn32f405xx_usart_ops = {
-    .read = stn32f405xx_usart_read,
-    .write = stn32f405xx_usart_write,
+static const MemoryRegionOps stm32f405xx_usart_ops = {
+    .read = stm32f405xx_usart_read,
+    .write = stm32f405xx_usart_write,
     .endianness = DEVICE_NATIVE_ENDIAN,
 };
 
-static void stn32f405xx_usart_init(Object *obj)
+static void stm32f405xx_usart_init(Object *obj)
 {
     stn32f405Usart *s = STM32F405xx_USART(obj);
 
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
-    memory_region_init_io(&s->mmio, obj, &stn32f405xx_usart_ops, s,
+    memory_region_init_io(&s->mmio, obj, &stm32f405xx_usart_ops, s,
                           TYPE_STM32F405xx_USART, 0x2000);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->mmio);
 
@@ -221,24 +221,24 @@ static void stn32f405xx_usart_init(Object *obj)
     }
 }
 
-static void stn32f405xx_usart_class_init(ObjectClass *klass, void *data)
+static void stm32f405xx_usart_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
 
     dc->reset = usart_reset;
 }
 
-static const TypeInfo stn32f405xx_usart_info = {
+static const TypeInfo stm32f405xx_usart_info = {
     .name          = TYPE_STM32F405xx_USART,
     .parent        = TYPE_SYS_BUS_DEVICE,
     .instance_size = sizeof(stn32f405Usart),
-    .instance_init = stn32f405xx_usart_init,
-    .class_init    = stn32f405xx_usart_class_init,
+    .instance_init = stm32f405xx_usart_init,
+    .class_init    = stm32f405xx_usart_class_init,
 };
 
-static void stn32f405xx_usart_register_types(void)
+static void stm32f405xx_usart_register_types(void)
 {
-    type_register_static(&stn32f405xx_usart_info);
+    type_register_static(&stm32f405xx_usart_info);
 }
 
-type_init(stn32f405xx_usart_register_types)
+type_init(stm32f405xx_usart_register_types)

@@ -22,63 +22,7 @@
  * THE SOFTWARE.
  */
 
-#include "hw/sysbus.h"
-#include "hw/hw.h"
-
-#ifndef ST_SYSCFG_ERR_DEBUG
-#define ST_SYSCFG_ERR_DEBUG 1
-#endif
-
-#define DB_PRINT_L(lvl, fmt, args...) do { \
-    if (ST_SYSCFG_ERR_DEBUG >= lvl) { \
-        fprintf(stderr, "stn32f405xx_syscfg: %s:" fmt, __func__, ## args); \
-    } \
-} while (0);
-
-#define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
-
-#define SYSCFG_MEMRMP  0x00
-#define SYSCFG_PMC     0x04
-#define SYSCFG_EXTICR1 0x08
-#define SYSCFG_EXTICR2 0x0C
-#define SYSCFG_EXTICR3 0x10
-#define SYSCFG_EXTICR4 0x14
-#define SYSCFG_CMPCR   0x20
-
-#define TYPE_STM32F405xx_SYSCFG "stn32f405xx-syscfg"
-#define STM32F405xx_SYSCFG(obj) \
-    OBJECT_CHECK(Stn32f405Syscfg, (obj), TYPE_STM32F405xx_SYSCFG)
-
-typedef struct {
-    SysBusDevice parent_obj;
-
-    MemoryRegion mmio;
-
-    uint32_t syscfg_memrmp;
-    uint32_t syscfg_pmc;
-    uint32_t syscfg_exticr1;
-    uint32_t syscfg_exticr2;
-    uint32_t syscfg_exticr3;
-    uint32_t syscfg_exticr4;
-    uint32_t syscfg_cmpcr;
-
-    qemu_irq irq;
-} Stn32f405Syscfg;
-
-static void syscfg_reset(DeviceState *dev)
-{
-    Stn32f405Syscfg *s = STM32F405xx_SYSCFG(dev);
-
-    s->syscfg_memrmp = 0x00000000;
-    s->syscfg_pmc = 0x00000000;
-    s->syscfg_exticr1 = 0x00000000;
-    s->syscfg_exticr2 = 0x00000000;
-    s->syscfg_exticr3 = 0x00000000;
-    s->syscfg_exticr4 = 0x00000000;
-    s->syscfg_cmpcr = 0x00000000;
-}
-
-static uint64_t stn32f405xx_syscfg_read(void *opaque, hwaddr addr,
+static uint64_t stm32f405xx_syscfg_read(void *opaque, hwaddr addr,
                                      unsigned int size)
 {
     Stn32f405Syscfg *s = opaque;
@@ -109,7 +53,7 @@ static uint64_t stn32f405xx_syscfg_read(void *opaque, hwaddr addr,
     return 0;
 }
 
-static void stn32f405xx_syscfg_write(void *opaque, hwaddr addr,
+static void stm32f405xx_syscfg_write(void *opaque, hwaddr addr,
                        uint64_t val64, unsigned int size)
 {
     Stn32f405Syscfg *s = opaque;
@@ -149,41 +93,41 @@ static void stn32f405xx_syscfg_write(void *opaque, hwaddr addr,
     }
 }
 
-static const MemoryRegionOps stn32f405xx_syscfg_ops = {
-    .read = stn32f405xx_syscfg_read,
-    .write = stn32f405xx_syscfg_write,
+static const MemoryRegionOps stm32f405xx_syscfg_ops = {
+    .read = stm32f405xx_syscfg_read,
+    .write = stm32f405xx_syscfg_write,
     .endianness = DEVICE_NATIVE_ENDIAN,
 };
 
-static void stn32f405xx_syscfg_init(Object *obj)
+static void stm32f405xx_syscfg_init(Object *obj)
 {
     Stn32f405Syscfg *s = STM32F405xx_SYSCFG(obj);
 
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
-    memory_region_init_io(&s->mmio, obj, &stn32f405xx_syscfg_ops, s,
+    memory_region_init_io(&s->mmio, obj, &stm32f405xx_syscfg_ops, s,
                           TYPE_STM32F405xx_SYSCFG, 0x2000);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->mmio);
 }
 
-static void stn32f405xx_syscfg_class_init(ObjectClass *klass, void *data)
+static void stm32f405xx_syscfg_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
 
     dc->reset = syscfg_reset;
 }
 
-static const TypeInfo stn32f405xx_syscfg_info = {
+static const TypeInfo stm32f405xx_syscfg_info = {
     .name          = TYPE_STM32F405xx_SYSCFG,
     .parent        = TYPE_SYS_BUS_DEVICE,
     .instance_size = sizeof(Stn32f405Syscfg),
-    .instance_init = stn32f405xx_syscfg_init,
-    .class_init    = stn32f405xx_syscfg_class_init,
+    .instance_init = stm32f405xx_syscfg_init,
+    .class_init    = stm32f405xx_syscfg_class_init,
 };
 
-static void stn32f405xx_syscfg_register_types(void)
+static void stm32f405xx_syscfg_register_types(void)
 {
-    type_register_static(&stn32f405xx_syscfg_info);
+    type_register_static(&stm32f405xx_syscfg_info);
 }
 
-type_init(stn32f405xx_syscfg_register_types)
+type_init(stm32f405xx_syscfg_register_types)

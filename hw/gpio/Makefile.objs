@@ -3,6 +3,6 @@ common-obj-$(CONFIG_PL061) += pl061.o
 common-obj-$(CONFIG_PUV3) += puv3_gpio.o
 common-obj-$(CONFIG_ZAURUS) += zaurus.o
 common-obj-$(CONFIG_E500) += mpc8xxx.o
-common-obj-$(CONFIG_NETDUINOP2) += stn32f405xx_gpio.o
+common-obj-$(CONFIG_NETDUINOP2) += stm32f405xx_gpio.o
 
 obj-$(CONFIG_OMAP) += omap_gpio.o

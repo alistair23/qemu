@@ -132,24 +132,24 @@ static void netduinoplus2_init(MachineState *machine)
     }
 
     /* System configuration controller */
-    sysbus_create_simple("stn32f405xx-syscfg", 0x40013800,
+    sysbus_create_simple("stm32f405xx-syscfg", 0x40013800,
                          pic[71]);
 
     /* Attach a UART (uses USART registers) and USART controllers */
     for (i = 0; i < 7; i++) {
-        sysbus_create_simple("stn32f405xx-usart", usart_addr[i],
+        sysbus_create_simple("stm32f405xx-usart", usart_addr[i],
                              pic[usart_irq[i]]);
     }
 
     /* Timer 2 to 5 */
     for (i = 0; i < 4; i++) {
-        sysbus_create_simple("stn32f405xx-timer", tim2_5_addr[i],
+        sysbus_create_simple("stm32f405xx-timer", tim2_5_addr[i],
                              pic[tim2_5_irq[i]]);
     }
 
     /* Attach GPIO devices */
     for (i = 0; i < 11; i++) {
-        gpio[i] = qdev_create(NULL, "stn32f405xx-gpio");
+        gpio[i] = qdev_create(NULL, "stm32f405xx-gpio");
         qdev_prop_set_uint8(gpio[i], "gpio-letter", gpio_letters[i]);
         qdev_init_nofail(gpio[i]);
         busdev = SYS_BUS_DEVICE(gpio[i]);
@@ -157,7 +157,7 @@ static void netduinoplus2_init(MachineState *machine)
     }
 
     /* Attach the External Interrupt */
-    dev = qdev_create(NULL, "stn32f405xx-exti");
+    dev = qdev_create(NULL, "stm32f405xx-exti");
     qdev_init_nofail(dev);
     busdev = SYS_BUS_DEVICE(dev);
     sysbus_mmio_map(busdev, 0, 0x40013C00);
