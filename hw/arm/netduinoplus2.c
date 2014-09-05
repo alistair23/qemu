@@ -74,6 +74,7 @@ static void netduinoplus2_init(MachineState *machine)
 
     static const int tim2_5_irq[] = {28, 29, 30, 50};
     static const int usart_irq[] = {37, 38, 39, 52, 53, 71, 82, 83};
+    static const int exti_irq[] = {6, 7, 8, 9, 10, 23, 23, 23, 23, 23, 40, 40, 40, 40, 40, 40};
 
     MemoryRegion *system_memory = get_system_memory();
     MemoryRegion *sram = g_new(MemoryRegion, 1);
@@ -86,13 +87,16 @@ static void netduinoplus2_init(MachineState *machine)
     ARMCPU *cpu;
     CPUARMState *env;
     DeviceState *nvic;
-    DeviceState *gpio;
+    DeviceState *gpio[11];
+    DeviceState *dev;
     SysBusDevice *busdev;
+    //qemu_irq gpio_in[11][15];
+    //qemu_irq gpio_out[11][15];
 
     int image_size;
     uint64_t entry;
     uint64_t lowaddr;
-    int i;
+    int i, j;
     int big_endian = 0;
 
     /* The Netduinio Plus 2 uses a Cortex-M4, while QEMU currently supports
@@ -145,11 +149,25 @@ static void netduinoplus2_init(MachineState *machine)
 
     /* Attach GPIO devices */
     for (i = 0; i < 11; i++) {
-        gpio = qdev_create(NULL, "stn32f405xx-gpio");
-        qdev_prop_set_uint8(gpio, "gpio-letter", gpio_letters[i]);
-        qdev_init_nofail(gpio);
-        busdev = SYS_BUS_DEVICE(gpio);
+        gpio[i] = qdev_create(NULL, "stn32f405xx-gpio");
+        qdev_prop_set_uint8(gpio[i], "gpio-letter", gpio_letters[i]);
+        qdev_init_nofail(gpio[i]);
+        busdev = SYS_BUS_DEVICE(gpio[i]);
         sysbus_mmio_map(busdev, 0, gpio_addr[i]);
+    }
+
+    /* Attach the External Interrupt */
+    dev = qdev_create(NULL, "stn32f405xx-exti");
+    qdev_init_nofail(dev);
+    busdev = SYS_BUS_DEVICE(dev);
+    sysbus_mmio_map(busdev, 0, 0x40013C00);
+    for (i = 0; i < 15; ++i) {
+        sysbus_connect_irq(busdev, i, pic[exti_irq[i]]);
+    }
+    for (i = 0; i < 9; ++i) {
+        for (j = 0; j < 15; j++) {
+            qdev_connect_gpio_out(gpio[i], j, qdev_get_gpio_in(dev, (i * 15) + j));
+        }
     }
 
     /* Load the kernel */
