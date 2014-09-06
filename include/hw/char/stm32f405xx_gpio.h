@@ -54,10 +54,10 @@
 #define GPIO_MODER_ANALOG      3
 
 #define TYPE_STM32F405xx_GPIO "stm32f405xx-gpio"
-#define STM32F405xx_GPIO(obj) OBJECT_CHECK(STM32F405GPIOState, (obj), \
+#define STM32F405xx_GPIO(obj) OBJECT_CHECK(Stm32f405GpioState, (obj), \
                            TYPE_STM32F405xx_GPIO)
 
-typedef struct STGPIOState {
+typedef struct Stm32f405GpioState {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
@@ -83,4 +83,4 @@ typedef struct STGPIOState {
 
     qemu_irq gpio_out[15];
     const unsigned char *id;
-} STM32F405GPIOState;
+} Stm32f405GpioState;

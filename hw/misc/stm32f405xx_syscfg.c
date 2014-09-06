@@ -27,7 +27,7 @@
 static uint64_t stm32f405xx_syscfg_read(void *opaque, hwaddr addr,
                                      unsigned int size)
 {
-    Stn32f405Syscfg *s = opaque;
+    Stm32f405SyscfgState *s = opaque;
 
     DB_PRINT("0x%x\n", (uint) addr);
 
@@ -58,7 +58,7 @@ static uint64_t stm32f405xx_syscfg_read(void *opaque, hwaddr addr,
 static void stm32f405xx_syscfg_write(void *opaque, hwaddr addr,
                        uint64_t val64, unsigned int size)
 {
-    Stn32f405Syscfg *s = opaque;
+    Stm32f405SyscfgState *s = opaque;
     uint32_t value = (uint32_t) val64;
 
     DB_PRINT("0x%x, 0x%x\n", value, (uint) addr);
@@ -103,7 +103,7 @@ static const MemoryRegionOps stm32f405xx_syscfg_ops = {
 
 static void stm32f405xx_syscfg_init(Object *obj)
 {
-    Stn32f405Syscfg *s = STM32F405xx_SYSCFG(obj);
+    Stm32f405SyscfgState *s = STM32F405xx_SYSCFG(obj);
 
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
@@ -122,7 +122,7 @@ static void stm32f405xx_syscfg_class_init(ObjectClass *klass, void *data)
 static const TypeInfo stm32f405xx_syscfg_info = {
     .name          = TYPE_STM32F405xx_SYSCFG,
     .parent        = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(Stn32f405Syscfg),
+    .instance_size = sizeof(Stm32f405SyscfgState),
     .instance_init = stm32f405xx_syscfg_init,
     .class_init    = stm32f405xx_syscfg_class_init,
 };

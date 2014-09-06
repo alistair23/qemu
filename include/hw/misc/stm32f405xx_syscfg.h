@@ -50,7 +50,7 @@
 
 #define TYPE_STM32F405xx_SYSCFG "stm32f405xx-syscfg"
 #define STM32F405xx_SYSCFG(obj) \
-    OBJECT_CHECK(Stn32f405Syscfg, (obj), TYPE_STM32F405xx_SYSCFG)
+    OBJECT_CHECK(Stm32f405SyscfgState, (obj), TYPE_STM32F405xx_SYSCFG)
 
 typedef struct {
     SysBusDevice parent_obj;
@@ -66,11 +66,11 @@ typedef struct {
     uint32_t syscfg_cmpcr;
 
     qemu_irq irq;
-} Stn32f405Syscfg;
+} Stm32f405SyscfgState;
 
 static void syscfg_reset(DeviceState *dev)
 {
-    Stn32f405Syscfg *s = STM32F405xx_SYSCFG(dev);
+    Stm32f405SyscfgState *s = STM32F405xx_SYSCFG(dev);
 
     s->syscfg_memrmp = 0x00000000;
     s->syscfg_pmc = 0x00000000;

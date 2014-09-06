@@ -51,7 +51,7 @@
 
 #define TYPE_STM32F405xx_EXTI "stm32f405xx-exti"
 #define STM32F405xx_EXTI(obj) \
-    OBJECT_CHECK(STM32F405Exti, (obj), TYPE_STM32F405xx_EXTI)
+    OBJECT_CHECK(Stm32f405ExtiState, (obj), TYPE_STM32F405xx_EXTI)
 
 typedef struct {
     SysBusDevice parent_obj;
@@ -66,11 +66,11 @@ typedef struct {
     uint32_t exti_pr;
 
     qemu_irq* irq;
-} STM32F405Exti;
+} Stm32f405ExtiState;
 
 static void exti_reset(DeviceState *dev)
 {
-    STM32F405Exti *s = STM32F405xx_EXTI(dev);
+    Stm32f405ExtiState *s = STM32F405xx_EXTI(dev);
 
     s->exti_imr = 0x00000000;
     s->exti_emr = 0x00000000;
@@ -82,7 +82,7 @@ static void exti_reset(DeviceState *dev)
 
 static void exti_set_irq(void * opaque, int irq, int level)
 {
-    STM32F405Exti *s = opaque;
+    Stm32f405ExtiState *s = opaque;
     DeviceState *syscfg = NULL;
 
     /* I don't like this at all */
@@ -90,7 +90,7 @@ static void exti_set_irq(void * opaque, int irq, int level)
     syscfg = qdev_find_recursive(sysbus_get_default(),
                                  "stm32f405xx-syscfg");
 
-    Stn32f405Syscfg *s_slave = STM32F405xx_SYSCFG(syscfg);
+    Stm32f405SyscfgState *s_slave = STM32F405xx_SYSCFG(syscfg);
 
     if (s_slave->syscfg_exticr1 & 0xFF) {
         qemu_irq_pulse(s->irq[0]);
@@ -152,7 +152,7 @@ static void exti_set_irq(void * opaque, int irq, int level)
 static uint64_t stm32f405xx_exti_read(void *opaque, hwaddr addr,
                                      unsigned int size)
 {
-    STM32F405Exti *s = opaque;
+    Stm32f405ExtiState *s = opaque;
 
     DB_PRINT("0x%x\n", (uint) addr);
 
@@ -180,7 +180,7 @@ static uint64_t stm32f405xx_exti_read(void *opaque, hwaddr addr,
 static void stm32f405xx_exti_write(void *opaque, hwaddr addr,
                        uint64_t val64, unsigned int size)
 {
-    STM32F405Exti *s = opaque;
+    Stm32f405ExtiState *s = opaque;
     uint32_t value = (uint32_t) val64;
 
     DB_PRINT("0x%x, 0x%x\n", value, (uint) addr);
@@ -218,7 +218,7 @@ static const MemoryRegionOps stm32f405xx_exti_ops = {
 
 static void stm32f405xx_exti_init(Object *obj)
 {
-    STM32F405Exti *s = STM32F405xx_EXTI(obj);
+    Stm32f405ExtiState *s = STM32F405xx_EXTI(obj);
     int i;
 
     s->irq = g_new0(qemu_irq, NUM_INTERRUPT_OUT_LINES);
@@ -245,7 +245,7 @@ static void stm32f405xx_exti_class_init(ObjectClass *klass, void *data)
 static const TypeInfo stm32f405xx_exti_info = {
     .name          = TYPE_STM32F405xx_EXTI,
     .parent        = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(STM32F405Exti),
+    .instance_size = sizeof(Stm32f405ExtiState),
     .instance_init = stm32f405xx_exti_init,
     .class_init    = stm32f405xx_exti_class_init,
 };

@@ -29,23 +29,23 @@ static const VMStateDescription vmstate_stm32f405xx_gpio = {
     .version_id = 1,
     .minimum_version_id = 1,
     .fields = (VMStateField[]) {
-        VMSTATE_UINT32(gpio_moder, STM32F405GPIOState),
-        VMSTATE_UINT32(gpio_otyper, STM32F405GPIOState),
-        VMSTATE_UINT32(gpio_ospeedr, STM32F405GPIOState),
-        VMSTATE_UINT32(gpio_pupdr, STM32F405GPIOState),
-        VMSTATE_UINT32(gpio_idr, STM32F405GPIOState),
-        VMSTATE_UINT32(gpio_odr, STM32F405GPIOState),
-        VMSTATE_UINT32(gpio_bsrr, STM32F405GPIOState),
-        VMSTATE_UINT32(gpio_lckr, STM32F405GPIOState),
-        VMSTATE_UINT32(gpio_afrl, STM32F405GPIOState),
-        VMSTATE_UINT32(gpio_afrh, STM32F405GPIOState),
+        VMSTATE_UINT32(gpio_moder, Stm32f405GpioState),
+        VMSTATE_UINT32(gpio_otyper, Stm32f405GpioState),
+        VMSTATE_UINT32(gpio_ospeedr, Stm32f405GpioState),
+        VMSTATE_UINT32(gpio_pupdr, Stm32f405GpioState),
+        VMSTATE_UINT32(gpio_idr, Stm32f405GpioState),
+        VMSTATE_UINT32(gpio_odr, Stm32f405GpioState),
+        VMSTATE_UINT32(gpio_bsrr, Stm32f405GpioState),
+        VMSTATE_UINT32(gpio_lckr, Stm32f405GpioState),
+        VMSTATE_UINT32(gpio_afrl, Stm32f405GpioState),
+        VMSTATE_UINT32(gpio_afrh, Stm32f405GpioState),
         VMSTATE_END_OF_LIST()
     }
 };
 
 static void gpio_reset(DeviceState *dev)
 {
-    STM32F405GPIOState *s = STM32F405xx_GPIO(dev);
+    Stm32f405GpioState *s = STM32F405xx_GPIO(dev);
 
     if (s->gpio_letter == 'a') {
         s->gpio_moder = 0xA8000000;
@@ -74,7 +74,7 @@ static void gpio_reset(DeviceState *dev)
 static uint64_t stm32f405xx_gpio_read(void *opaque, hwaddr offset,
                            unsigned size)
 {
-    STM32F405GPIOState *s = (STM32F405GPIOState *)opaque;
+    Stm32f405GpioState *s = (Stm32f405GpioState *)opaque;
 
     DB_PRINT("Read 0x%x\n", (uint) offset);
 
@@ -108,7 +108,7 @@ static uint64_t stm32f405xx_gpio_read(void *opaque, hwaddr offset,
 
 static void gpio_set_irq(void * opaque, int irq, int level)
 {
-    STM32F405GPIOState *s = (STM32F405GPIOState *)opaque;
+    Stm32f405GpioState *s = (Stm32f405GpioState *)opaque;
 
     DB_PRINT("Line: %d Level: %d\n", irq, level);
 
@@ -120,7 +120,7 @@ static void gpio_set_irq(void * opaque, int irq, int level)
 static void stm32f405xx_gpio_write(void *opaque, hwaddr offset,
                                    uint64_t value, unsigned size)
 {
-    STM32F405GPIOState *s = (STM32F405GPIOState *)opaque;
+    Stm32f405GpioState *s = (Stm32f405GpioState *)opaque;
     int i, mask;
 
     DB_PRINT("Write 0x%x, 0x%x\n", (uint) value, (uint) offset);
@@ -193,7 +193,7 @@ static const MemoryRegionOps stm32f405xx_gpio_ops = {
 };
 
 static Property stm32f405_gpio_properties[] = {
-    DEFINE_PROP_UINT8("gpio-letter", STM32F405GPIOState, gpio_letter,
+    DEFINE_PROP_UINT8("gpio-letter", Stm32f405GpioState, gpio_letter,
                       (uint) 'a'),
     DEFINE_PROP_END_OF_LIST(),
 };
@@ -201,7 +201,7 @@ static Property stm32f405_gpio_properties[] = {
 
 static void stm32f405xx_gpio_initfn(Object *obj)
 {
-    STM32F405GPIOState *s = STM32F405xx_GPIO(obj);
+    Stm32f405GpioState *s = STM32F405xx_GPIO(obj);
 
     memory_region_init_io(&s->iomem, obj, &stm32f405xx_gpio_ops, s,
                           "stm32f405xx_gpio", 0x2000);
@@ -223,7 +223,7 @@ static void stm32f405xx_gpio_class_init(ObjectClass *klass, void *data)
 static const TypeInfo stm32f405xx_gpio_info = {
     .name          = TYPE_STM32F405xx_GPIO,
     .parent        = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(STM32F405GPIOState),
+    .instance_size = sizeof(Stm32f405GpioState),
     .instance_init = stm32f405xx_gpio_initfn,
     .class_init    = stm32f405xx_gpio_class_init,
 };
