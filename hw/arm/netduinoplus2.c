@@ -167,6 +167,12 @@ static void netduinoplus2_init(MachineState *machine)
         }
     }
 
+    /* Attach the ADC */
+    for (i = 0; i < 3; i++) {
+        sysbus_create_simple("stm32f405xx-adc", 0x40012000 + (i * 0x100),
+                             pic[18]);
+    }
+
     /* Attach the External Interrupt device */
     dev = qdev_create(NULL, "stm32f405xx-exti");
     qdev_init_nofail(dev);
