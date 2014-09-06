@@ -110,20 +110,15 @@ static void gpio_set_irq(void * opaque, int irq, int level)
 {
     STM32F405GPIOState *s = (STM32F405GPIOState *)opaque;
 
-    DB_PRINT("Interrupt In\n");
-}
+    DB_PRINT("Line: %d Level: %d\n", irq, level);
 
-static void gpio_set_outputs(STM32F405GPIOState *s)
-{
-    int i;
+    s->gpio_odr |= level << irq;
 
-    for (i = 0; i < 15; i++){
-        qemu_set_irq(s->gpio_out[i], s->gpio_odr & (1U << i) & (0xFFFF ^ s->gpio_direction));
-    }
+    qemu_set_irq(s->gpio_out[irq], !!((level << irq) & (0xFFFF ^ s->gpio_direction)));
 }
 
 static void stm32f405xx_gpio_write(void *opaque, hwaddr offset,
-                        uint64_t value, unsigned size)
+                                   uint64_t value, unsigned size)
 {
     STM32F405GPIOState *s = (STM32F405GPIOState *)opaque;
     int i, mask;
@@ -163,13 +158,11 @@ static void stm32f405xx_gpio_write(void *opaque, hwaddr offset,
         return;
     case GPIO_ODR:
         s->gpio_odr = ((uint32_t) value & (s->gpio_direction ^ 0xFFFF));
-        gpio_set_outputs(s);
         return;
     case GPIO_BSRR_HIGH:
         /* Reset the output value */
         s->gpio_odr &= (uint32_t) (value ^ 0xFFFF);
         s->gpio_bsrr = (uint32_t) (value << 16);
-        gpio_set_outputs(s);
         DB_PRINT("Output: 0x%x\n", s->gpio_odr);
         return;
     case GPIO_BSRR:
@@ -178,7 +171,6 @@ static void stm32f405xx_gpio_write(void *opaque, hwaddr offset,
         /* Bottom 16 bits are "write one to set output" */
         s->gpio_odr |= (uint32_t) (value & 0xFFFF);
         s->gpio_bsrr = (uint32_t) value;
-        gpio_set_outputs(s);
         DB_PRINT("Output: 0x%x\n", s->gpio_odr);
         return;
     case GPIO_LCKR:
@@ -214,7 +206,6 @@ static void stm32f405xx_gpio_initfn(Object *obj)
     memory_region_init_io(&s->iomem, obj, &stm32f405xx_gpio_ops, s,
                           "stm32f405xx_gpio", 0x2000);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->iomem);
-    sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
     qdev_init_gpio_in(DEVICE(obj), gpio_set_irq, 15);
     qdev_init_gpio_out(DEVICE(obj), s->gpio_out, 15);
