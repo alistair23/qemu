@@ -24,6 +24,31 @@
 
 #include "hw/misc/stm32f405xx_syscfg.h"
 
+#ifndef ST_SYSCFG_ERR_DEBUG
+#define ST_SYSCFG_ERR_DEBUG 1
+#endif
+
+#define DB_PRINT_L(lvl, fmt, args...) do { \
+    if (ST_SYSCFG_ERR_DEBUG >= lvl) { \
+        fprintf(stderr, "stm32f405xx_syscfg: %s:" fmt, __func__, ## args); \
+    } \
+} while (0);
+
+#define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
+
+static void syscfg_reset(DeviceState *dev)
+{
+    Stm32f405SyscfgState *s = STM32F405xx_SYSCFG(dev);
+
+    s->syscfg_memrmp = 0x00000000;
+    s->syscfg_pmc = 0x00000000;
+    s->syscfg_exticr1 = 0x00000000;
+    s->syscfg_exticr2 = 0x00000000;
+    s->syscfg_exticr3 = 0x00000000;
+    s->syscfg_exticr4 = 0x00000000;
+    s->syscfg_cmpcr = 0x00000000;
+}
+
 static uint64_t stm32f405xx_syscfg_read(void *opaque, hwaddr addr,
                                      unsigned int size)
 {
