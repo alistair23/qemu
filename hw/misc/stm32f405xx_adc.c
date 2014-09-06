@@ -37,6 +37,10 @@
 
 #define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
 
+#define TYPE_STM32F405xx_ADC "stm32f405xx-adc"
+#define STM32F405xx_ADC(obj) \
+    OBJECT_CHECK(Stm32f405AdcState, (obj), TYPE_STM32F405xx_ADC)
+
 #define ADC_SR    0x00
 #define ADC_CR1   0x04
 #define ADC_CR2   0x08
@@ -57,13 +61,10 @@
 #define ADC_JDR3  0x44
 #define ADC_JDR4  0x48
 #define ADC_DR    0x4C
-#define ADC_CSR   0x300
-#define ADC_CCR   0x304
-#define ADC_CDR   0x308
 
-#define TYPE_STM32F405xx_ADC "stm32f405xx-adc"
-#define STM32F405xx_ADC(obj) \
-    OBJECT_CHECK(Stm32f405AdcState, (obj), TYPE_STM32F405xx_ADC)
+#define ADC_CR2_ADON    0x01
+#define ADC_CR2_CONT    0x02
+#define ADC_CR2_SWSTART 0x40000000
 
 typedef struct {
     SysBusDevice parent_obj;
@@ -90,10 +91,6 @@ typedef struct {
     uint32_t adc_jdr3;
     uint32_t adc_jdr4;
     uint32_t adc_dr;
-
-    uint32_t adc_csr;
-    uint32_t adc_ccr;
-    uint32_t adc_cdr;
 
     qemu_irq irq;
 } Stm32f405AdcState;
@@ -122,10 +119,6 @@ static void adc_reset(DeviceState *dev)
     s->adc_jdr3 = 0x00000000;
     s->adc_jdr4 = 0x00000000;
     s->adc_dr = 0x00000000;
-
-    s->adc_csr = 0x00000000;
-    s->adc_ccr = 0x00000000;
-    s->adc_cdr = 0x00000000;
 }
 
 static uint64_t stm32f405xx_adc_read(void *opaque, hwaddr addr,
@@ -135,21 +128,60 @@ static uint64_t stm32f405xx_adc_read(void *opaque, hwaddr addr,
 
     DB_PRINT("0x%x\n", (uint) addr);
 
+    if (addr >= 0x100) {
+        qemu_log_mask(LOG_UNIMP,
+                "STM32F405xx_adc_read: ADC Common Register Unsupported\n");
+    }
+
     switch (addr) {
-    case ADC_MEMRMP:
-        return s->adc_memrmp;
-    case ADC_PMC:
-        return s->adc_pmc;
-    case ADC_EXTICR1:
-        return s->adc_exticr1;
-    case ADC_EXTICR2:
-        return s->adc_exticr2;
-    case ADC_EXTICR3:
-        return s->adc_exticr3;
-    case ADC_EXTICR4:
-        return s->adc_exticr4;
-    case ADC_CMPCR:
-        return s->adc_cmpcr;
+    case ADC_SR:
+        return s->adc_sr;
+    case ADC_CR1:
+        return s->adc_cr1;
+    case ADC_CR2:
+        return s->adc_cr2;
+    case ADC_SMPR1:
+        return s->adc_smpr1;
+    case ADC_SMPR2:
+        return s->adc_smpr2;
+    case ADC_JOFR1:
+        return s->adc_jofr1;
+    case ADC_JOFR2:
+        return s->adc_jofr2;
+    case ADC_JOFR3:
+        return s->adc_jofr3;
+    case ADC_JOFR4:
+        return s->adc_jofr4;
+    case ADC_HTR:
+        return s->adc_htr;
+    case ADC_LTR:
+        return s->adc_ltr;
+    case ADC_SQR1:
+        return s->adc_sqr1;
+    case ADC_SQR2:
+        return s->adc_sqr2;
+    case ADC_SQR3:
+        return s->adc_sqr3;
+    case ADC_JSQR:
+        return s->adc_jsqr;
+    case ADC_JDR1:
+        return s->adc_jdr1 - s->adc_jofr1;
+    case ADC_JDR2:
+        return s->adc_jdr2 - s->adc_jofr2;
+    case ADC_JDR3:
+        return s->adc_jdr3 - s->adc_jofr3;
+    case ADC_JDR4:
+        return s->adc_jdr4 - s->adc_jofr4;
+    case ADC_DR:
+        if ((s->adc_cr2 & ADC_CR2_ADON) && (s->adc_cr2 & ADC_CR2_SWSTART)) {
+            if (!(s->adc_cr2 & ADC_CR2_CONT)) {
+                s->adc_cr2 ^= ADC_CR2_ADON;
+            }
+            s->adc_cr2 ^= ADC_CR2_SWSTART;
+            return s->adc_dr;
+        } else {
+            return 0x00000000;
+        }
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
                       "STM32F405xx_adc_read: Bad offset %x\n", (int)addr);
@@ -167,32 +199,69 @@ static void stm32f405xx_adc_write(void *opaque, hwaddr addr,
 
     DB_PRINT("0x%x, 0x%x\n", value, (uint) addr);
 
+    if (addr >= 0x100) {
+        qemu_log_mask(LOG_UNIMP,
+                "STM32F405xx_adc_write: ADC Common Register Unsupported\n");
+    }
+
     switch (addr) {
-    case ADC_MEMRMP:
-        qemu_log_mask(LOG_UNIMP,
-                      "STM32F405xx_adc_write: Changeing the memory mapping " \
-                      "isn't supported in QEMU\n");
-        return;
-    case ADC_PMC:
-        qemu_log_mask(LOG_UNIMP,
-                      "STM32F405xx_adc_write: Peripheral mode configuration " \
-                      "isn't supported in QEMU\n");
-        return;
-    case ADC_EXTICR1:
-        s->adc_exticr1 = (value & 0xFF);
-        return;
-    case ADC_EXTICR2:
-        s->adc_exticr2 = (value & 0xFF);
-        return;
-    case ADC_EXTICR3:
-        s->adc_exticr3 = (value & 0xFF);
-        return;
-    case ADC_EXTICR4:
-        s->adc_exticr4 = (value & 0xFF);
-        return;
-    case ADC_CMPCR:
-        s->adc_cmpcr = value;
-        return;
+    case ADC_SR:
+        s->adc_sr &= (value & 0x3F);
+        break;
+    case ADC_CR1:
+        s->adc_cr1 = value;
+        break;
+    case ADC_CR2:
+        s->adc_cr2 = value;
+        break;
+    case ADC_SMPR1:
+        s->adc_smpr1 = value;
+        break;
+    case ADC_SMPR2:
+        s->adc_smpr2 = value;
+        break;
+    case ADC_JOFR1:
+        s->adc_jofr1 = (value & 0xFFF);
+        break;
+    case ADC_JOFR2:
+        s->adc_jofr2 = (value & 0xFFF);
+        break;
+    case ADC_JOFR3:
+        s->adc_jofr3 = (value & 0xFFF);
+        break;
+    case ADC_JOFR4:
+        s->adc_jofr4 = (value & 0xFFF);
+        break;
+    case ADC_HTR:
+        s->adc_htr = value;
+        break;
+    case ADC_LTR:
+        s->adc_ltr = value;
+        break;
+    case ADC_SQR1:
+        s->adc_sqr1 = value;
+        break;
+    case ADC_SQR2:
+        s->adc_sqr2 = value;
+        break;
+    case ADC_SQR3:
+        s->adc_sqr3 = value;
+        break;
+    case ADC_JSQR:
+        s->adc_jsqr = value;
+        break;
+    case ADC_JDR1:
+        s->adc_jdr1 = value;
+        break;
+    case ADC_JDR2:
+        s->adc_jdr2 = value;
+        break;
+    case ADC_JDR3:
+        s->adc_jdr3 = value;
+        break;
+    case ADC_JDR4:
+        s->adc_jdr4 = value;
+        break;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
                       "STM32F405xx_adc_write: Bad offset %x\n", (int)addr);
