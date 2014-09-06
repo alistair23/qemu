@@ -24,18 +24,6 @@
 
 #include "hw/sysbus.h"
 
-#ifndef ST_GPIO_ERR_DEBUG
-#define ST_GPIO_ERR_DEBUG 0
-#endif
-
-#define DB_PRINT_L(lvl, fmt, args...) do { \
-    if (ST_GPIO_ERR_DEBUG >= lvl) { \
-        fprintf(stderr, "stm32f405xx_gpio: %s:" fmt, __func__, ## args); \
-    } \
-} while (0);
-
-#define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
-
 #define GPIO_MODER     0x00
 #define GPIO_OTYPER    0x04
 #define GPIO_OSPEEDR   0x08
