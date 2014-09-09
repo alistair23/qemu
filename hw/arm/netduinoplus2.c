@@ -75,6 +75,7 @@ static void netduinoplus2_init(MachineState *machine)
     static const int tim2_5_irq[] = {28, 29, 30, 50};
     static const int usart_irq[] = {37, 38, 39, 52, 53, 71, 82, 83};
     static const int exti_irq[] = {6, 7, 8, 9, 10, 23, 23, 23, 23, 23, 40, 40, 40, 40, 40, 40};
+    const char *cpu_model = machine->cpu_model;
 
     MemoryRegion *system_memory = get_system_memory();
     MemoryRegion *sram = g_new(MemoryRegion, 1);
@@ -103,7 +104,10 @@ static void netduinoplus2_init(MachineState *machine)
     /* The Netduinio Plus 2 uses a Cortex-M4, while QEMU currently supports
      * the Cortex-M3, so that is being used instead
      */
-    cpu = cpu_arm_init("cortex-m3");
+    if (!cpu_model) {
+        cpu_model = "cortex-m3";
+    }
+    cpu = cpu_arm_init(cpu_model);
     env = &cpu->env;
 
     memory_region_init_ram(flash, NULL, "netduino.flash", FLASH_SIZE);
