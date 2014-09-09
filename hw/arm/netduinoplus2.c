@@ -144,7 +144,7 @@ static void netduinoplus2_init(MachineState *machine)
     sysbus_mmio_map(busdev, 0, 0x40013800);
     sysbus_connect_irq(busdev, 0, pic[71]);
 
-    /* Attach a UART (uses USART registers) and USART controllers */
+    /* Attach UART (uses USART registers) and USART controllers */
     for (i = 0; i < 7; i++) {
         sysbus_create_simple("stm32f405xx-usart", usart_addr[i],
                              pic[usart_irq[i]]);
