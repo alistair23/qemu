@@ -121,6 +121,16 @@ static void adc_reset(DeviceState *dev)
     s->adc_dr = 0x00000000;
 }
 
+static uint32_t stm32f405xx_adc_generate_value(Stm32f405AdcState *s)
+{
+    /* Attempts to fake some ADC values */
+    s->adc_dr = s->adc_dr + rand();
+    if (s->adc_dr > 0x7FFFFFFF) {
+        s->adc_dr = 0;
+    }
+    return s->adc_dr;
+}
+
 static uint64_t stm32f405xx_adc_read(void *opaque, hwaddr addr,
                                      unsigned int size)
 {
@@ -178,7 +188,7 @@ static uint64_t stm32f405xx_adc_read(void *opaque, hwaddr addr,
                 s->adc_cr2 ^= ADC_CR2_ADON;
             }
             s->adc_cr2 ^= ADC_CR2_SWSTART;
-            return s->adc_dr;
+            return stm32f405xx_adc_generate_value(s);
         } else {
             return 0x00000000;
         }
