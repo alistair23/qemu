@@ -155,12 +155,24 @@ static uint64_t stm32f405xx_adc_read(void *opaque, hwaddr addr,
     case ADC_SMPR2:
         return s->adc_smpr2;
     case ADC_JOFR1:
+        qemu_log_mask(LOG_UNIMP,"STM32F405xx_adc_read: " \
+                      "Injection ADC is not implemented, the registers are " \
+                      "includded for compatability\n");
         return s->adc_jofr1;
     case ADC_JOFR2:
+        qemu_log_mask(LOG_UNIMP,"STM32F405xx_adc_read: " \
+                      "Injection ADC is not implemented, the registers are " \
+                      "includded for compatability\n");
         return s->adc_jofr2;
     case ADC_JOFR3:
+        qemu_log_mask(LOG_UNIMP,"STM32F405xx_adc_read: " \
+                      "Injection ADC is not implemented, the registers are " \
+                      "includded for compatability\n");
         return s->adc_jofr3;
     case ADC_JOFR4:
+        qemu_log_mask(LOG_UNIMP,"STM32F405xx_adc_read: " \
+                      "Injection ADC is not implemented, the registers are " \
+                      "includded for compatability\n");
         return s->adc_jofr4;
     case ADC_HTR:
         return s->adc_htr;
@@ -173,14 +185,29 @@ static uint64_t stm32f405xx_adc_read(void *opaque, hwaddr addr,
     case ADC_SQR3:
         return s->adc_sqr3;
     case ADC_JSQR:
+        qemu_log_mask(LOG_UNIMP,"STM32F405xx_adc_read: " \
+                      "Injection ADC is not implemented, the registers are " \
+                      "includded for compatability\n");
         return s->adc_jsqr;
     case ADC_JDR1:
+        qemu_log_mask(LOG_UNIMP,"STM32F405xx_adc_read: " \
+                      "Injection ADC is not implemented, the registers are " \
+                      "includded for compatability\n");
         return s->adc_jdr1 - s->adc_jofr1;
     case ADC_JDR2:
+        qemu_log_mask(LOG_UNIMP,"STM32F405xx_adc_read: " \
+                      "Injection ADC is not implemented, the registers are " \
+                      "includded for compatability\n");
         return s->adc_jdr2 - s->adc_jofr2;
     case ADC_JDR3:
+        qemu_log_mask(LOG_UNIMP,"STM32F405xx_adc_read: " \
+                      "Injection ADC is not implemented, the registers are " \
+                      "includded for compatability\n");
         return s->adc_jdr3 - s->adc_jofr3;
     case ADC_JDR4:
+        qemu_log_mask(LOG_UNIMP,"STM32F405xx_adc_read: " \
+                      "Injection ADC is not implemented, the registers are " \
+                      "includded for compatability\n");
         return s->adc_jdr4 - s->adc_jofr4;
     case ADC_DR:
         if ((s->adc_cr2 & ADC_CR2_ADON) && (s->adc_cr2 & ADC_CR2_SWSTART)) {
@@ -232,15 +259,27 @@ static void stm32f405xx_adc_write(void *opaque, hwaddr addr,
         break;
     case ADC_JOFR1:
         s->adc_jofr1 = (value & 0xFFF);
+        qemu_log_mask(LOG_UNIMP,"STM32F405xx_adc_write: " \
+                      "Injection ADC is not implemented, the registers are " \
+                      "includded for compatability\n");
         break;
     case ADC_JOFR2:
         s->adc_jofr2 = (value & 0xFFF);
+        qemu_log_mask(LOG_UNIMP,"STM32F405xx_adc_write: " \
+                      "Injection ADC is not implemented, the registers are " \
+                      "includded for compatability\n");
         break;
     case ADC_JOFR3:
         s->adc_jofr3 = (value & 0xFFF);
+        qemu_log_mask(LOG_UNIMP,"STM32F405xx_adc_write: " \
+                      "Injection ADC is not implemented, the registers are " \
+                      "includded for compatability\n");
         break;
     case ADC_JOFR4:
         s->adc_jofr4 = (value & 0xFFF);
+        qemu_log_mask(LOG_UNIMP,"STM32F405xx_adc_write: " \
+                      "Injection ADC is not implemented, the registers are " \
+                      "includded for compatability\n");
         break;
     case ADC_HTR:
         s->adc_htr = value;
@@ -259,18 +298,33 @@ static void stm32f405xx_adc_write(void *opaque, hwaddr addr,
         break;
     case ADC_JSQR:
         s->adc_jsqr = value;
+        qemu_log_mask(LOG_UNIMP,"STM32F405xx_adc_write: " \
+                      "Injection ADC is not implemented, the registers are " \
+                      "includded for compatability\n");
         break;
     case ADC_JDR1:
         s->adc_jdr1 = value;
+        qemu_log_mask(LOG_UNIMP,"STM32F405xx_adc_write: " \
+                      "Injection ADC is not implemented, the registers are " \
+                      "includded for compatability\n");
         break;
     case ADC_JDR2:
         s->adc_jdr2 = value;
+        qemu_log_mask(LOG_UNIMP,"STM32F405xx_adc_write: " \
+                      "Injection ADC is not implemented, the registers are " \
+                      "includded for compatability\n");
         break;
     case ADC_JDR3:
         s->adc_jdr3 = value;
+        qemu_log_mask(LOG_UNIMP,"STM32F405xx_adc_write: " \
+                      "Injection ADC is not implemented, the registers are " \
+                      "includded for compatability\n");
         break;
     case ADC_JDR4:
         s->adc_jdr4 = value;
+        qemu_log_mask(LOG_UNIMP,"STM32F405xx_adc_write: " \
+                      "Injection ADC is not implemented, the registers are " \
+                      "includded for compatability\n");
         break;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
@@ -291,7 +345,7 @@ static void stm32f405xx_adc_init(Object *obj)
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
     memory_region_init_io(&s->mmio, obj, &stm32f405xx_adc_ops, s,
-                          TYPE_STM32F405xx_ADC, 0x2000);
+                          TYPE_STM32F405xx_ADC, 0x1000);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->mmio);
 }
 
