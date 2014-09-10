@@ -24,7 +24,7 @@
 
 #include "hw/sysbus.h"
 #include "hw/hw.h"
-#include "hw/misc/stm32f405xx_syscfg.h"
+#include "hw/misc/stm32f405_syscfg.h"
 
 #ifndef ST_EXTI_ERR_DEBUG
 #define ST_EXTI_ERR_DEBUG 1

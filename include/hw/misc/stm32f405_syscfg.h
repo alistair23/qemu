@@ -22,8 +22,8 @@
  * THE SOFTWARE.
  */
 
-#ifndef HW_ST_SYSCFG_H
-#define HW_ST_SYSCFG_H
+#ifndef HW_STM_SYSCFG_H
+#define HW_STM_SYSCFG_H
 
 #include "hw/sysbus.h"
 #include "hw/hw.h"

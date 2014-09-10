@@ -22,14 +22,14 @@
  * THE SOFTWARE.
  */
 
-#include "hw/misc/stm32f405xx_syscfg.h"
+#include "hw/misc/stm32f405_syscfg.h"
 
-#ifndef ST_SYSCFG_ERR_DEBUG
-#define ST_SYSCFG_ERR_DEBUG 1
+#ifndef STM_SYSCFG_ERR_DEBUG
+#define STM_SYSCFG_ERR_DEBUG 1
 #endif
 
 #define DB_PRINT_L(lvl, fmt, args...) do { \
-    if (ST_SYSCFG_ERR_DEBUG >= lvl) { \
+    if (STM_SYSCFG_ERR_DEBUG >= lvl) { \
         fprintf(stderr, "stm32f405xx_syscfg: %s:" fmt, __func__, ## args); \
     } \
 } while (0);
