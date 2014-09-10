@@ -22,58 +22,19 @@
  * THE SOFTWARE.
  */
 
-#include "hw/sysbus.h"
-#include "sysemu/char.h"
-#include "hw/hw.h"
+#include "hw/char/stm32f405_usart.h"
 
-#ifndef ST_USART_ERR_DEBUG
-#define ST_USART_ERR_DEBUG 0
+#ifndef STM_USART_ERR_DEBUG
+#define STM_USART_ERR_DEBUG 0
 #endif
 
 #define DB_PRINT_L(lvl, fmt, args...) do { \
-    if (ST_USART_ERR_DEBUG >= lvl) { \
+    if (STM_USART_ERR_DEBUG >= lvl) { \
         fprintf(stderr, "stm32f405xx_usart: %s:" fmt, __func__, ## args); \
     } \
 } while (0);
 
 #define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
-
-#define USART_SR   0x00
-#define USART_DR   0x04
-#define USART_BRR  0x08
-#define USART_CR1  0x0C
-#define USART_CR2  0x10
-#define USART_CR3  0x14
-#define USART_GTPR 0x18
-
-#define USART_SR_TXE  (1 << 7)
-#define USART_SR_TC   (1 << 6)
-#define USART_SR_RXNE (1 << 5)
-
-#define USART_CR1_UE  (1 << 13)
-#define USART_CR1_RXNEIE  (1 << 5)
-#define USART_CR1_TE  (1 << 3)
-
-#define TYPE_STM32F405xx_USART "stm32f405xx-usart"
-#define STM32F405xx_USART(obj) \
-    OBJECT_CHECK(Stm32f405UsartState, (obj), TYPE_STM32F405xx_USART)
-
-typedef struct {
-    SysBusDevice parent_obj;
-
-    MemoryRegion mmio;
-
-    uint32_t usart_sr;
-    uint32_t usart_dr;
-    uint32_t usart_brr;
-    uint32_t usart_cr1;
-    uint32_t usart_cr2;
-    uint32_t usart_cr3;
-    uint32_t usart_gtpr;
-
-    CharDriverState *chr;
-    qemu_irq irq;
-} Stm32f405UsartState;
 
 static int usart_can_receive(void *opaque)
 {
@@ -210,7 +171,7 @@ static void stm32f405xx_usart_init(Object *obj)
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
     memory_region_init_io(&s->mmio, obj, &stm32f405xx_usart_ops, s,
-                          TYPE_STM32F405xx_USART, 0x2000);
+                          TYPE_STM32F405_USART, 0x2000);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->mmio);
 
     s->chr = qemu_char_get_next_serial();
@@ -229,7 +190,7 @@ static void stm32f405xx_usart_class_init(ObjectClass *klass, void *data)
 }
 
 static const TypeInfo stm32f405xx_usart_info = {
-    .name          = TYPE_STM32F405xx_USART,
+    .name          = TYPE_STM32F405_USART,
     .parent        = TYPE_SYS_BUS_DEVICE,
     .instance_size = sizeof(Stm32f405UsartState),
     .instance_init = stm32f405xx_usart_init,
