@@ -47,8 +47,10 @@
     OBJECT_CHECK(Stm32f405UsartState, (obj), TYPE_STM32F405_USART)
 
 typedef struct {
+    /* <private> */
     SysBusDevice parent_obj;
 
+    /* <public> */
     MemoryRegion mmio;
 
     uint32_t usart_sr;

@@ -30,7 +30,7 @@
 
 #define DB_PRINT_L(lvl, fmt, args...) do { \
     if (STM_USART_ERR_DEBUG >= lvl) { \
-        fprintf(stderr, "stm32f405xx_usart: %s:" fmt, __func__, ## args); \
+        qemu_log("stm32f405xx_usart: %s:" fmt, __func__, ## args); \
     } \
 } while (0);
 
@@ -76,12 +76,12 @@ static void usart_reset(DeviceState *dev)
 }
 
 static uint64_t stm32f405xx_usart_read(void *opaque, hwaddr addr,
-                                    unsigned int size)
+                                       unsigned int size)
 {
     Stm32f405UsartState *s = opaque;
     uint64_t retvalue;
 
-    DB_PRINT("Read 0x%x\n", (uint) addr);
+    DB_PRINT("Read 0x%"HWADDR_PRIx"\n", addr);
 
     switch (addr) {
     case USART_SR:
@@ -104,7 +104,8 @@ static uint64_t stm32f405xx_usart_read(void *opaque, hwaddr addr,
         return s->usart_gtpr;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "STM32F405xx_usart_read: Bad offset %x\n", (int)addr);
+                      "STM32F405xx_usart_read: Bad offset " \
+                      "0x%"HWADDR_PRIx"\n", addr);
         return 0;
     }
 
@@ -115,10 +116,10 @@ static void stm32f405xx_usart_write(void *opaque, hwaddr addr,
                        uint64_t val64, unsigned int size)
 {
     Stm32f405UsartState *s = opaque;
-    uint32_t value = (uint32_t) val64;
+    uint32_t value = val64;
     unsigned char ch;
 
-    DB_PRINT("Write 0x%x, 0x%x\n", value, (uint) addr);
+    DB_PRINT("Write 0x%x, 0x%"HWADDR_PRIx"\n", value, addr);
 
     switch (addr) {
     case USART_SR:
@@ -154,7 +155,8 @@ static void stm32f405xx_usart_write(void *opaque, hwaddr addr,
         return;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "STM32F405xx_usart_write: Bad offset %x\n", (int)addr);
+                      "STM32F405xx_usart_write: Bad offset " \
+                      "0x%"HWADDR_PRIx"\n", addr);
     }
 }
 
