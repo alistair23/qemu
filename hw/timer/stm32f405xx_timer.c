@@ -60,6 +60,10 @@
 
 #define TIM_CR1_CEN   1
 
+#define TIM_CCER_CC2E   (1 << 4)
+#define TIM_CCMR1_OC2M2 (1 << 14)
+#define TIM_CCMR1_OC2M1 (1 << 13)
+
 #define TYPE_STM32F405xxTIMER "stm32f405xx-timer"
 #define STM32F405xxTIMER(obj) OBJECT_CHECK(Stm32f405TimerState, (obj), TYPE_STM32F405xxTIMER)
 
@@ -223,6 +227,7 @@ static void stm32f405xx_timer_write(void *opaque, hwaddr offset,
     uint32_t value = (uint32_t) val64;
 
     DB_PRINT("Write 0x%x, 0x%x\n", value, (uint) offset);
+    fprintf(stderr, "Write 0x%x, 0x%x\n", value, (uint) offset);
 
     switch (offset) {
     case TIM_CR1:
@@ -243,15 +248,33 @@ static void stm32f405xx_timer_write(void *opaque, hwaddr offset,
         return;
     case TIM_EGR:
         s->tim_egr = value;
+        if (s->tim_egr & 1) {
+            /* Re-init the counter */
+            stm32f405xx_timer_reset(DEVICE(s));
+        }
         return;
     case TIM_CCMR1:
         s->tim_ccmr1 = value;
+        if (s->tim_ccmr1 & 3) {
+            /* Output compare mode */
+            if (s->tim_ccmr1 & (TIM_CCMR1_OC2M2 + TIM_CCMR1_OC2M1)) {
+                /* PWM Mode 2 */
+/* In upcounting, channel 2 is active as long as TIMx_CNT<TIMx_CCR2
+else inactive */
+            }
+        }
+                /* Output compare 2 preload enable */
+/* 1: Preload register on TIMx_CCR1 enabled. Read/Write operations access the preload
+register. TIMx_CCR1 preload value is loaded in the active register at each update event. */
         return;
     case TIM_CCMR2:
         s->tim_ccmr2 = value;
         return;
     case TIM_CCER:
         s->tim_ccer = value;
+        if (s->tim_ccer & TIM_CCER_CC2E) {
+            /* Capture/Compare 2 output enabled */
+        }
         return;
     case TIM_CNT:
         s->tim_cnt = value;
