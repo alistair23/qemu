@@ -1,5 +1,5 @@
 /*
- * STM32F405xx Timer 2 to 5
+ * STM32F405xx Timer
  *
  * Copyright (c) 2014 Alistair Francis <alistair@alistair23.me>
  *
@@ -22,9 +22,7 @@
  * THE SOFTWARE.
  */
 
-#include "hw/sysbus.h"
-#include "qemu/timer.h"
-#include "sysemu/sysemu.h"
+#include "hw/timer/stm32f405_timer.h"
 
 #ifndef ST_TIM2_5_ERR_DEBUG
 #define ST_TIM2_5_ERR_DEBUG 0
@@ -37,66 +35,6 @@
 } while (0);
 
 #define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
-
-#define TIM_CR1      0x00
-#define TIM_CR2      0x04
-#define TIM_SMCR     0x08
-#define TIM_DIER     0x0C
-#define TIM_SR       0x10
-#define TIM_EGR      0x14
-#define TIM_CCMR1    0x18
-#define TIM_CCMR2    0x1C
-#define TIM_CCER     0x20
-#define TIM_CNT      0x24
-#define TIM_PSC      0x28
-#define TIM_ARR      0x2C
-#define TIM_CCR1     0x34
-#define TIM_CCR2     0x38
-#define TIM_CCR3     0x3C
-#define TIM_CCR4     0x40
-#define TIM_DCR      0x48
-#define TIM_DMAR     0x4C
-#define TIM_OR       0x50
-
-#define TIM_CR1_CEN   1
-
-#define TIM_CCER_CC2E   (1 << 4)
-#define TIM_CCMR1_OC2M2 (1 << 14)
-#define TIM_CCMR1_OC2M1 (1 << 13)
-
-#define TYPE_STM32F405xxTIMER "stm32f405xx-timer"
-#define STM32F405xxTIMER(obj) OBJECT_CHECK(Stm32f405TimerState, (obj), TYPE_STM32F405xxTIMER)
-
-typedef struct Stm32f405TimerState {
-    SysBusDevice parent_obj;
-
-    MemoryRegion iomem;
-    QEMUTimer *timer;
-    qemu_irq irq;
-
-    uint32_t tick_offset_vmstate;
-    uint32_t tick_offset;
-
-    uint32_t tim_cr1;
-    uint32_t tim_cr2;
-    uint32_t tim_smcr;
-    uint32_t tim_dier;
-    uint32_t tim_sr;
-    uint32_t tim_egr;
-    uint32_t tim_ccmr1;
-    uint32_t tim_ccmr2;
-    uint32_t tim_ccer;
-    uint32_t tim_cnt;
-    uint32_t tim_psc;
-    uint32_t tim_arr;
-    uint32_t tim_ccr1;
-    uint32_t tim_ccr2;
-    uint32_t tim_ccr3;
-    uint32_t tim_ccr4;
-    uint32_t tim_dcr;
-    uint32_t tim_dmar;
-    uint32_t tim_or;
-} Stm32f405TimerState;
 
 static void stm32f405xx_timer_update(Stm32f405TimerState *s)
 {
