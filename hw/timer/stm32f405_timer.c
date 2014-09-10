@@ -24,12 +24,12 @@
 
 #include "hw/timer/stm32f405_timer.h"
 
-#ifndef ST_TIM2_5_ERR_DEBUG
-#define ST_TIM2_5_ERR_DEBUG 0
+#ifndef STM_TIMER_ERR_DEBUG
+#define STM_TIMER_ERR_DEBUG 0
 #endif
 
 #define DB_PRINT_L(lvl, fmt, args...) do { \
-    if (ST_TIM2_5_ERR_DEBUG >= lvl) { \
+    if (STM_TIMER_ERR_DEBUG >= lvl) { \
         qemu_log("stm32f405xx_timer: %s:" fmt, __func__, ## args); \
     } \
 } while (0);
@@ -143,7 +143,7 @@ static uint64_t stm32f405xx_timer_read(void *opaque, hwaddr offset,
         return s->tim_or;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "STM32F405xx_timer2_5_write: Bad offset %x\n", (int) offset);
+                      "STM32F405xx_timer_write: Bad offset %x\n", (int) offset);
     }
 
     return 0;
@@ -239,7 +239,7 @@ register. TIMx_CCR1 preload value is loaded in the active register at each updat
         return;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "STM32F405xx_timer2_5_write: Bad offset %x\n", (int) offset);
+                      "STM32F405xx_timer_write: Bad offset %x\n", (int) offset);
     }
 }
 
