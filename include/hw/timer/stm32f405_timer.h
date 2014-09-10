@@ -52,12 +52,16 @@
 #define TIM_CCMR1_OC2M2 (1 << 14)
 #define TIM_CCMR1_OC2M1 (1 << 13)
 
+#define TIM_DIER_UIE  1
+
 #define TYPE_STM32F405xxTIMER "stm32f405xx-timer"
 #define STM32F405xxTIMER(obj) OBJECT_CHECK(Stm32f405TimerState, (obj), TYPE_STM32F405xxTIMER)
 
-typedef struct Stm32f405TimerState {
+typedef struct STM32f405TimerState {
+    /* <private> */
     SysBusDevice parent_obj;
 
+    /* <public> */
     MemoryRegion iomem;
     QEMUTimer *timer;
     qemu_irq irq;

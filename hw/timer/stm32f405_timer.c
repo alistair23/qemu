@@ -30,50 +30,41 @@
 
 #define DB_PRINT_L(lvl, fmt, args...) do { \
     if (ST_TIM2_5_ERR_DEBUG >= lvl) { \
-        fprintf(stderr, "stm32f405xx_timer: %s:" fmt, __func__, ## args); \
+        qemu_log("stm32f405xx_timer: %s:" fmt, __func__, ## args); \
     } \
 } while (0);
 
 #define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
 
-static void stm32f405xx_timer_update(Stm32f405TimerState *s)
-{
-    s->tim_sr |= 1;
-    qemu_irq_pulse(s->irq);
-}
-
 static void stm32f405xx_timer_interrupt(void *opaque)
 {
-    Stm32f405TimerState *s = (Stm32f405TimerState *)opaque;
+    Stm32f405TimerState *s = opaque;
 
     DB_PRINT("Interrupt in: %s\n", __func__);
 
-    if (s->tim_dier == 0x01 && s->tim_cr1 & TIM_CR1_CEN) {
-        stm32f405xx_timer_update(s);
+    if (s->tim_dier & TIM_DIER_UIE && s->tim_cr1 & TIM_CR1_CEN) {
+        s->tim_sr |= 1;
+        qemu_irq_pulse(s->irq);
     }
-}
-
-static uint32_t stm32f405xx_timer_get_count(Stm32f405TimerState *s)
-{
-    int64_t now = qemu_clock_get_ns(rtc_clock);
-    return s->tick_offset + now / get_ticks_per_sec();
 }
 
 static void stm32f405xx_timer_set_alarm(Stm32f405TimerState *s)
 {
     uint32_t ticks;
+    int64_t now;
 
     DB_PRINT("Alarm raised in: %s at 0x%x\n", __func__, s->tim_cr1);
 
-    ticks = s->tim_arr - stm32f405xx_timer_get_count(s)/
-                         (s->tim_psc + 1);
+    // Consider removing RTC clock
+    now = qemu_clock_get_ns(rtc_clock) / get_ticks_per_sec();
+    ticks = s->tim_arr - (s->tick_offset + now) / (s->tim_psc + 1);
+
     DB_PRINT("Alarm set in %u ticks\n", ticks);
 
     if (ticks == 0) {
         timer_del(s->timer);
         stm32f405xx_timer_interrupt(s);
     } else {
-        int64_t now = qemu_clock_get_ns(rtc_clock) / get_ticks_per_sec();
         timer_mod(s->timer, now + (int64_t)ticks);
         DB_PRINT("Wait Time: 0x%x\n", (uint32_t) (now + ticks));
     }
@@ -81,7 +72,7 @@ static void stm32f405xx_timer_set_alarm(Stm32f405TimerState *s)
 
 static void stm32f405xx_timer_reset(DeviceState *dev)
 {
-    struct Stm32f405TimerState *s = STM32F405xxTIMER(dev);
+    Stm32f405TimerState *s = STM32F405xxTIMER(dev);
 
     s->tim_cr1 = 0;
     s->tim_cr2 = 0;
@@ -107,9 +98,9 @@ static void stm32f405xx_timer_reset(DeviceState *dev)
 static uint64_t stm32f405xx_timer_read(void *opaque, hwaddr offset,
                            unsigned size)
 {
-    Stm32f405TimerState *s = (Stm32f405TimerState *)opaque;
+    Stm32f405TimerState *s = opaque;
 
-    DB_PRINT("Read 0x%x\n", (uint) offset);
+    DB_PRINT("Read 0x%"HWADDR_PRIx"\n", offset);
 
     switch (offset) {
     case TIM_CR1:
@@ -161,11 +152,11 @@ static uint64_t stm32f405xx_timer_read(void *opaque, hwaddr offset,
 static void stm32f405xx_timer_write(void *opaque, hwaddr offset,
                         uint64_t val64, unsigned size)
 {
-    Stm32f405TimerState *s = (Stm32f405TimerState *)opaque;
-    uint32_t value = (uint32_t) val64;
+    Stm32f405TimerState *s = opaque;
+    uint32_t value = val64;
 
-    DB_PRINT("Write 0x%x, 0x%x\n", value, (uint) offset);
-    fprintf(stderr, "Write 0x%x, 0x%x\n", value, (uint) offset);
+    DB_PRINT("Write 0x%x, 0x%"HWADDR_PRIx"\n", value, offset);
+    fprintf(stderr, "Write 0x%x, 0x%"HWADDR_PRIx"\n", value, offset);
 
     switch (offset) {
     case TIM_CR1:
@@ -278,19 +269,21 @@ static void stm32f405xx_timer_init(Object *obj)
 
 static void stm32f405xx_timer_pre_save(void *opaque)
 {
-    Stm32f405TimerState *s = (Stm32f405TimerState *)opaque;
+    Stm32f405TimerState *s = opaque;
 
     int64_t delta = qemu_clock_get_ns(rtc_clock) -
                     qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
+
     s->tick_offset_vmstate = s->tick_offset + delta / get_ticks_per_sec();
 }
 
 static int stm32f405xx_timer_post_load(void *opaque, int version_id)
 {
-    Stm32f405TimerState *s = (Stm32f405TimerState *)opaque;
+    Stm32f405TimerState *s = opaque;
 
     int64_t delta = qemu_clock_get_ns(rtc_clock) -
                     qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
+
     s->tick_offset = s->tick_offset_vmstate - delta / get_ticks_per_sec();
     stm32f405xx_timer_set_alarm(s);
     return 0;
