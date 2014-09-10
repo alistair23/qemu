@@ -57,7 +57,7 @@ static const VMStateDescription vmstate_stm32f405xx_gpio = {
     }
 };
 
-static void gpio_reset(DeviceState *dev)
+static void stm32f405xx_gpio_reset(DeviceState *dev)
 {
     Stm32f405GpioState *s = STM32F405xx_GPIO(dev);
 
@@ -120,7 +120,7 @@ static uint64_t stm32f405xx_gpio_read(void *opaque, hwaddr offset,
     return 0;
 }
 
-static void gpio_set_irq(void * opaque, int irq, int level)
+static void stm32f405xx_gpio_set_irq(void * opaque, int irq, int level)
 {
     Stm32f405GpioState *s = (Stm32f405GpioState *)opaque;
 
@@ -221,7 +221,7 @@ static void stm32f405xx_gpio_initfn(Object *obj)
                           "stm32f405xx_gpio", 0x2000);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->iomem);
 
-    qdev_init_gpio_in(DEVICE(obj), gpio_set_irq, 15);
+    qdev_init_gpio_in(DEVICE(obj), stm32f405xx_gpio_set_irq, 15);
     qdev_init_gpio_out(DEVICE(obj), s->gpio_out, 15);
 }
 
@@ -231,7 +231,7 @@ static void stm32f405xx_gpio_class_init(ObjectClass *klass, void *data)
 
     dc->vmsd = &vmstate_stm32f405xx_gpio;
     dc->props = stm32f405_gpio_properties;
-    dc->reset = gpio_reset;
+    dc->reset = stm32f405xx_gpio_reset;
 }
 
 static const TypeInfo stm32f405xx_gpio_info = {

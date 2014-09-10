@@ -38,7 +38,7 @@
 
 #define TYPE_STM32F405xx_SYSCFG "stm32f405xx-syscfg"
 #define STM32F405xx_SYSCFG(obj) \
-    OBJECT_CHECK(Stm32f405SyscfgState, (obj), TYPE_STM32F405xx_SYSCFG)
+    OBJECT_CHECK(STM32f405SyscfgState, (obj), TYPE_STM32F405xx_SYSCFG)
 
 typedef struct {
     /* <private> */
@@ -56,6 +56,6 @@ typedef struct {
     uint32_t syscfg_cmpcr;
 
     qemu_irq irq;
-} Stm32f405SyscfgState;
+} STM32f405SyscfgState;
 
 #endif

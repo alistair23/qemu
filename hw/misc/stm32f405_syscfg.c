@@ -36,9 +36,9 @@
 
 #define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
 
-static void syscfg_reset(DeviceState *dev)
+static void stm32f405xx_syscfg_reset(DeviceState *dev)
 {
-    Stm32f405SyscfgState *s = STM32F405xx_SYSCFG(dev);
+    STM32f405SyscfgState *s = STM32F405xx_SYSCFG(dev);
 
     s->syscfg_memrmp = 0x00000000;
     s->syscfg_pmc = 0x00000000;
@@ -52,7 +52,7 @@ static void syscfg_reset(DeviceState *dev)
 static uint64_t stm32f405xx_syscfg_read(void *opaque, hwaddr addr,
                                      unsigned int size)
 {
-    Stm32f405SyscfgState *s = opaque;
+    STM32f405SyscfgState *s = opaque;
 
     DB_PRINT("0x%x\n", (uint) addr);
 
@@ -83,7 +83,7 @@ static uint64_t stm32f405xx_syscfg_read(void *opaque, hwaddr addr,
 static void stm32f405xx_syscfg_write(void *opaque, hwaddr addr,
                        uint64_t val64, unsigned int size)
 {
-    Stm32f405SyscfgState *s = opaque;
+    STM32f405SyscfgState *s = opaque;
     uint32_t value = val64;
 
     DB_PRINT("0x%x, 0x%x\n", value, (uint) addr);
@@ -128,7 +128,7 @@ static const MemoryRegionOps stm32f405xx_syscfg_ops = {
 
 static void stm32f405xx_syscfg_init(Object *obj)
 {
-    Stm32f405SyscfgState *s = STM32F405xx_SYSCFG(obj);
+    STM32f405SyscfgState *s = STM32F405xx_SYSCFG(obj);
 
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
@@ -141,13 +141,13 @@ static void stm32f405xx_syscfg_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
 
-    dc->reset = syscfg_reset;
+    dc->reset = stm32f405xx_syscfg_reset;
 }
 
 static const TypeInfo stm32f405xx_syscfg_info = {
     .name          = TYPE_STM32F405xx_SYSCFG,
     .parent        = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(Stm32f405SyscfgState),
+    .instance_size = sizeof(STM32f405SyscfgState),
     .instance_init = stm32f405xx_syscfg_init,
     .class_init    = stm32f405xx_syscfg_class_init,
 };

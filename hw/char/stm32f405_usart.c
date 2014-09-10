@@ -36,9 +36,9 @@
 
 #define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
 
-static int usart_can_receive(void *opaque)
+static int stm32f405xx_usart_can_receive(void *opaque)
 {
-    Stm32f405UsartState *s = opaque;
+    STM32f405UsartState *s = opaque;
 
     if (s->usart_cr1 & USART_CR1_UE && s->usart_cr1 & USART_CR1_TE) {
         return 1;
@@ -47,9 +47,9 @@ static int usart_can_receive(void *opaque)
     return 0;
 }
 
-static void usart_receive(void *opaque, const uint8_t *buf, int size)
+static void stm32f405xx_usart_receive(void *opaque, const uint8_t *buf, int size)
 {
-    Stm32f405UsartState *s = opaque;
+    STM32f405UsartState *s = opaque;
 
     s->usart_dr = *buf;
 
@@ -62,9 +62,9 @@ static void usart_receive(void *opaque, const uint8_t *buf, int size)
     DB_PRINT("Receiving: %c\n", s->usart_dr);
 }
 
-static void usart_reset(DeviceState *dev)
+static void stm32f405xx_usart_reset(DeviceState *dev)
 {
-    Stm32f405UsartState *s = STM32F405xx_USART(dev);
+    STM32f405UsartState *s = STM32F405xx_USART(dev);
 
     s->usart_sr = 0x00C00000;
     s->usart_dr = 0x00000000;
@@ -78,7 +78,7 @@ static void usart_reset(DeviceState *dev)
 static uint64_t stm32f405xx_usart_read(void *opaque, hwaddr addr,
                                        unsigned int size)
 {
-    Stm32f405UsartState *s = opaque;
+    STM32f405UsartState *s = opaque;
     uint64_t retvalue;
 
     DB_PRINT("Read 0x%"HWADDR_PRIx"\n", addr);
@@ -115,7 +115,7 @@ static uint64_t stm32f405xx_usart_read(void *opaque, hwaddr addr,
 static void stm32f405xx_usart_write(void *opaque, hwaddr addr,
                        uint64_t val64, unsigned int size)
 {
-    Stm32f405UsartState *s = opaque;
+    STM32f405UsartState *s = opaque;
     uint32_t value = val64;
     unsigned char ch;
 
@@ -168,7 +168,7 @@ static const MemoryRegionOps stm32f405xx_usart_ops = {
 
 static void stm32f405xx_usart_init(Object *obj)
 {
-    Stm32f405UsartState *s = STM32F405xx_USART(obj);
+    STM32f405UsartState *s = STM32F405xx_USART(obj);
 
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
@@ -179,8 +179,8 @@ static void stm32f405xx_usart_init(Object *obj)
     s->chr = qemu_char_get_next_serial();
 
     if (s->chr) {
-        qemu_chr_add_handlers(s->chr, usart_can_receive, usart_receive,
-                              NULL, s);
+        qemu_chr_add_handlers(s->chr, stm32f405xx_usart_can_receive,
+                              stm32f405xx_usart_receive, NULL, s);
     }
 }
 
@@ -188,13 +188,13 @@ static void stm32f405xx_usart_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
 
-    dc->reset = usart_reset;
+    dc->reset = stm32f405xx_usart_reset;
 }
 
 static const TypeInfo stm32f405xx_usart_info = {
     .name          = TYPE_STM32F405_USART,
     .parent        = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(Stm32f405UsartState),
+    .instance_size = sizeof(STM32f405UsartState),
     .instance_init = stm32f405xx_usart_init,
     .class_init    = stm32f405xx_usart_class_init,
 };

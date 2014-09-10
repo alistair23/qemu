@@ -39,7 +39,7 @@
 
 #define TYPE_STM32F405xx_ADC "stm32f405xx-adc"
 #define STM32F405xx_ADC(obj) \
-    OBJECT_CHECK(Stm32f405AdcState, (obj), TYPE_STM32F405xx_ADC)
+    OBJECT_CHECK(STM32f405AdcState, (obj), TYPE_STM32F405xx_ADC)
 
 #define ADC_SR    0x00
 #define ADC_CR1   0x04
@@ -93,11 +93,11 @@ typedef struct {
     uint32_t adc_dr;
 
     qemu_irq irq;
-} Stm32f405AdcState;
+} STM32f405AdcState;
 
-static void adc_reset(DeviceState *dev)
+static void stm32f405xx_adc_reset(DeviceState *dev)
 {
-    Stm32f405AdcState *s = STM32F405xx_ADC(dev);
+    STM32f405AdcState *s = STM32F405xx_ADC(dev);
 
     s->adc_sr = 0x00000000;
     s->adc_cr1 = 0x00000000;
@@ -121,7 +121,7 @@ static void adc_reset(DeviceState *dev)
     s->adc_dr = 0x00000000;
 }
 
-static uint32_t stm32f405xx_adc_generate_value(Stm32f405AdcState *s)
+static uint32_t stm32f405xx_adc_generate_value(STM32f405AdcState *s)
 {
     /* Attempts to fake some ADC values */
     s->adc_dr = s->adc_dr + rand();
@@ -134,7 +134,7 @@ static uint32_t stm32f405xx_adc_generate_value(Stm32f405AdcState *s)
 static uint64_t stm32f405xx_adc_read(void *opaque, hwaddr addr,
                                      unsigned int size)
 {
-    Stm32f405AdcState *s = opaque;
+    STM32f405AdcState *s = opaque;
 
     DB_PRINT("0x%x\n", (uint) addr);
 
@@ -231,7 +231,7 @@ static uint64_t stm32f405xx_adc_read(void *opaque, hwaddr addr,
 static void stm32f405xx_adc_write(void *opaque, hwaddr addr,
                        uint64_t val64, unsigned int size)
 {
-    Stm32f405AdcState *s = opaque;
+    STM32f405AdcState *s = opaque;
     uint32_t value = (uint32_t) val64;
 
     DB_PRINT("0x%x, 0x%x\n", value, (uint) addr);
@@ -340,7 +340,7 @@ static const MemoryRegionOps stm32f405xx_adc_ops = {
 
 static void stm32f405xx_adc_init(Object *obj)
 {
-    Stm32f405AdcState *s = STM32F405xx_ADC(obj);
+    STM32f405AdcState *s = STM32F405xx_ADC(obj);
 
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
@@ -353,13 +353,13 @@ static void stm32f405xx_adc_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
 
-    dc->reset = adc_reset;
+    dc->reset = stm32f405xx_adc_reset;
 }
 
 static const TypeInfo stm32f405xx_adc_info = {
     .name          = TYPE_STM32F405xx_ADC,
     .parent        = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(Stm32f405AdcState),
+    .instance_size = sizeof(STM32f405AdcState),
     .instance_init = stm32f405xx_adc_init,
     .class_init    = stm32f405xx_adc_class_init,
 };

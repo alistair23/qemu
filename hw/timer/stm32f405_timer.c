@@ -38,7 +38,7 @@
 
 static void stm32f405xx_timer_interrupt(void *opaque)
 {
-    Stm32f405TimerState *s = opaque;
+    STM32f405TimerState *s = opaque;
 
     DB_PRINT("Interrupt in: %s\n", __func__);
 
@@ -48,7 +48,7 @@ static void stm32f405xx_timer_interrupt(void *opaque)
     }
 }
 
-static void stm32f405xx_timer_set_alarm(Stm32f405TimerState *s)
+static void stm32f405xx_timer_set_alarm(STM32f405TimerState *s)
 {
     uint32_t ticks;
     int64_t now;
@@ -72,7 +72,7 @@ static void stm32f405xx_timer_set_alarm(Stm32f405TimerState *s)
 
 static void stm32f405xx_timer_reset(DeviceState *dev)
 {
-    Stm32f405TimerState *s = STM32F405xxTIMER(dev);
+    STM32f405TimerState *s = STM32F405xxTIMER(dev);
 
     s->tim_cr1 = 0;
     s->tim_cr2 = 0;
@@ -98,7 +98,7 @@ static void stm32f405xx_timer_reset(DeviceState *dev)
 static uint64_t stm32f405xx_timer_read(void *opaque, hwaddr offset,
                            unsigned size)
 {
-    Stm32f405TimerState *s = opaque;
+    STM32f405TimerState *s = opaque;
 
     DB_PRINT("Read 0x%"HWADDR_PRIx"\n", offset);
 
@@ -152,7 +152,7 @@ static uint64_t stm32f405xx_timer_read(void *opaque, hwaddr offset,
 static void stm32f405xx_timer_write(void *opaque, hwaddr offset,
                         uint64_t val64, unsigned size)
 {
-    Stm32f405TimerState *s = opaque;
+    STM32f405TimerState *s = opaque;
     uint32_t value = val64;
 
     DB_PRINT("Write 0x%x, 0x%"HWADDR_PRIx"\n", value, offset);
@@ -251,7 +251,7 @@ static const MemoryRegionOps stm32f405xx_timer_ops = {
 
 static void stm32f405xx_timer_init(Object *obj)
 {
-    Stm32f405TimerState *s = STM32F405xxTIMER(obj);
+    STM32f405TimerState *s = STM32F405xxTIMER(obj);
     struct tm tm;
 
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
@@ -269,7 +269,7 @@ static void stm32f405xx_timer_init(Object *obj)
 
 static void stm32f405xx_timer_pre_save(void *opaque)
 {
-    Stm32f405TimerState *s = opaque;
+    STM32f405TimerState *s = opaque;
 
     int64_t delta = qemu_clock_get_ns(rtc_clock) -
                     qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
@@ -279,7 +279,7 @@ static void stm32f405xx_timer_pre_save(void *opaque)
 
 static int stm32f405xx_timer_post_load(void *opaque, int version_id)
 {
-    Stm32f405TimerState *s = opaque;
+    STM32f405TimerState *s = opaque;
 
     int64_t delta = qemu_clock_get_ns(rtc_clock) -
                     qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
@@ -296,26 +296,26 @@ static const VMStateDescription vmstate_stm32f405xx_timer = {
     .pre_save = stm32f405xx_timer_pre_save,
     .post_load = stm32f405xx_timer_post_load,
     .fields = (VMStateField[]) {
-        VMSTATE_UINT32(tick_offset_vmstate, Stm32f405TimerState),
-        VMSTATE_UINT32(tim_cr1, Stm32f405TimerState),
-        VMSTATE_UINT32(tim_cr2, Stm32f405TimerState),
-        VMSTATE_UINT32(tim_smcr, Stm32f405TimerState),
-        VMSTATE_UINT32(tim_dier, Stm32f405TimerState),
-        VMSTATE_UINT32(tim_sr, Stm32f405TimerState),
-        VMSTATE_UINT32(tim_egr, Stm32f405TimerState),
-        VMSTATE_UINT32(tim_ccmr1, Stm32f405TimerState),
-        VMSTATE_UINT32(tim_ccmr1, Stm32f405TimerState),
-        VMSTATE_UINT32(tim_ccer, Stm32f405TimerState),
-        VMSTATE_UINT32(tim_cnt, Stm32f405TimerState),
-        VMSTATE_UINT32(tim_psc, Stm32f405TimerState),
-        VMSTATE_UINT32(tim_arr, Stm32f405TimerState),
-        VMSTATE_UINT32(tim_ccr1, Stm32f405TimerState),
-        VMSTATE_UINT32(tim_ccr2, Stm32f405TimerState),
-        VMSTATE_UINT32(tim_ccr3, Stm32f405TimerState),
-        VMSTATE_UINT32(tim_ccr4, Stm32f405TimerState),
-        VMSTATE_UINT32(tim_dcr, Stm32f405TimerState),
-        VMSTATE_UINT32(tim_dmar, Stm32f405TimerState),
-        VMSTATE_UINT32(tim_or, Stm32f405TimerState),
+        VMSTATE_UINT32(tick_offset_vmstate, STM32f405TimerState),
+        VMSTATE_UINT32(tim_cr1, STM32f405TimerState),
+        VMSTATE_UINT32(tim_cr2, STM32f405TimerState),
+        VMSTATE_UINT32(tim_smcr, STM32f405TimerState),
+        VMSTATE_UINT32(tim_dier, STM32f405TimerState),
+        VMSTATE_UINT32(tim_sr, STM32f405TimerState),
+        VMSTATE_UINT32(tim_egr, STM32f405TimerState),
+        VMSTATE_UINT32(tim_ccmr1, STM32f405TimerState),
+        VMSTATE_UINT32(tim_ccmr1, STM32f405TimerState),
+        VMSTATE_UINT32(tim_ccer, STM32f405TimerState),
+        VMSTATE_UINT32(tim_cnt, STM32f405TimerState),
+        VMSTATE_UINT32(tim_psc, STM32f405TimerState),
+        VMSTATE_UINT32(tim_arr, STM32f405TimerState),
+        VMSTATE_UINT32(tim_ccr1, STM32f405TimerState),
+        VMSTATE_UINT32(tim_ccr2, STM32f405TimerState),
+        VMSTATE_UINT32(tim_ccr3, STM32f405TimerState),
+        VMSTATE_UINT32(tim_ccr4, STM32f405TimerState),
+        VMSTATE_UINT32(tim_dcr, STM32f405TimerState),
+        VMSTATE_UINT32(tim_dmar, STM32f405TimerState),
+        VMSTATE_UINT32(tim_or, STM32f405TimerState),
         VMSTATE_END_OF_LIST()
     }
 };
@@ -331,7 +331,7 @@ static void stm32f405xx_timer_class_init(ObjectClass *klass, void *data)
 static const TypeInfo stm32f405xx_timer_info = {
     .name          = TYPE_STM32F405_TIMER,
     .parent        = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(Stm32f405TimerState),
+    .instance_size = sizeof(STM32f405TimerState),
     .instance_init = stm32f405xx_timer_init,
     .class_init    = stm32f405xx_timer_class_init,
 };
