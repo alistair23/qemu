@@ -30,7 +30,7 @@
 
 #define DB_PRINT_L(lvl, fmt, args...) do { \
     if (STM_SYSCFG_ERR_DEBUG >= lvl) { \
-        fprintf(stderr, "stm32f405xx_syscfg: %s:" fmt, __func__, ## args); \
+        qemu_log("stm32f405xx_syscfg: %s:" fmt, __func__, ## args); \
     } \
 } while (0);
 
@@ -84,7 +84,7 @@ static void stm32f405xx_syscfg_write(void *opaque, hwaddr addr,
                        uint64_t val64, unsigned int size)
 {
     Stm32f405SyscfgState *s = opaque;
-    uint32_t value = (uint32_t) val64;
+    uint32_t value = val64;
 
     DB_PRINT("0x%x, 0x%x\n", value, (uint) addr);
 

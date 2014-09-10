@@ -41,8 +41,10 @@
     OBJECT_CHECK(Stm32f405SyscfgState, (obj), TYPE_STM32F405xx_SYSCFG)
 
 typedef struct {
+    /* <private> */
     SysBusDevice parent_obj;
 
+    /* <public> */
     MemoryRegion mmio;
 
     uint32_t syscfg_memrmp;
