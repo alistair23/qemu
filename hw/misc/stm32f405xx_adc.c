@@ -66,6 +66,9 @@
 #define ADC_CR2_CONT    0x02
 #define ADC_CR2_SWSTART 0x40000000
 
+#undef RAND_MAX
+#define RAND_MAX 0xFF
+
 typedef struct {
     SysBusDevice parent_obj;
 
@@ -125,9 +128,6 @@ static uint32_t stm32f405xx_adc_generate_value(STM32f405AdcState *s)
 {
     /* Attempts to fake some ADC values */
     s->adc_dr = s->adc_dr + rand();
-    if (s->adc_dr > 0x7FFFFFFF) {
-        s->adc_dr = 0;
-    }
     return s->adc_dr;
 }
 
