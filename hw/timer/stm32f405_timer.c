@@ -329,7 +329,7 @@ static void stm32f405xx_timer_class_init(ObjectClass *klass, void *data)
 }
 
 static const TypeInfo stm32f405xx_timer_info = {
-    .name          = TYPE_STM32F405xxTIMER,
+    .name          = TYPE_STM32F405_TIMER,
     .parent        = TYPE_SYS_BUS_DEVICE,
     .instance_size = sizeof(Stm32f405TimerState),
     .instance_init = stm32f405xx_timer_init,
