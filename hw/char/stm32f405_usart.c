@@ -133,7 +133,7 @@ static void stm32f405xx_usart_write(void *opaque, hwaddr addr,
         if (value < 0xF000) {
             ch = value;
             if (s->chr) {
-                qemu_chr_fe_write(s->chr, &ch, 1);
+                qemu_chr_fe_write_all(s->chr, &ch, 1);
             }
             s->usart_sr |= USART_SR_TC;
         }
