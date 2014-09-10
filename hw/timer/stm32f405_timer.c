@@ -55,18 +55,18 @@ static void stm32f405_timer_set_alarm(STM32f405TimerState *s)
 
     DB_PRINT("Alarm raised in: %s at 0x%x\n", __func__, s->tim_cr1);
 
-    // Consider removing RTC clock
-    now = qemu_clock_get_ns(rtc_clock) / get_ticks_per_sec();
-    ticks = s->tim_arr - (s->tick_offset + now) / (s->tim_psc + 1);
+    now = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
+    ticks = s->tim_arr - (s->tick_offset + (now / get_ticks_per_sec())) *
+            (s->tim_psc + 1);
 
-    DB_PRINT("Alarm set in %u ticks\n", ticks);
+    DB_PRINT("Alarm set in %d ticks\n", ticks);
 
     if (ticks == 0) {
         timer_del(s->timer);
         stm32f405_timer_interrupt(s);
     } else {
-        timer_mod(s->timer, now + (int64_t)ticks);
-        DB_PRINT("Wait Time: 0x%x\n", (uint32_t) (now + ticks));
+        timer_mod(s->timer, (now + (int64_t) ticks));
+        DB_PRINT("Wait Time: %u\n", (uint32_t) (now + ticks));
     }
 }
 
@@ -156,7 +156,6 @@ static void stm32f405_timer_write(void *opaque, hwaddr offset,
     uint32_t value = val64;
 
     DB_PRINT("Write 0x%x, 0x%"HWADDR_PRIx"\n", value, offset);
-    fprintf(stderr, "Write 0x%x, 0x%"HWADDR_PRIx"\n", value, offset);
 
     switch (offset) {
     case TIM_CR1:
@@ -262,39 +261,15 @@ static void stm32f405_timer_init(Object *obj)
 
     qemu_get_timedate(&tm, 0);
     s->tick_offset = mktimegm(&tm) -
-        qemu_clock_get_ns(rtc_clock) / get_ticks_per_sec();
+        qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) / get_ticks_per_sec();
 
-    s->timer = timer_new_ns(rtc_clock, stm32f405_timer_interrupt, s);
-}
-
-static void stm32f405_timer_pre_save(void *opaque)
-{
-    STM32f405TimerState *s = opaque;
-
-    int64_t delta = qemu_clock_get_ns(rtc_clock) -
-                    qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
-
-    s->tick_offset_vmstate = s->tick_offset + delta / get_ticks_per_sec();
-}
-
-static int stm32f405_timer_post_load(void *opaque, int version_id)
-{
-    STM32f405TimerState *s = opaque;
-
-    int64_t delta = qemu_clock_get_ns(rtc_clock) -
-                    qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
-
-    s->tick_offset = s->tick_offset_vmstate - delta / get_ticks_per_sec();
-    stm32f405_timer_set_alarm(s);
-    return 0;
+    s->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, stm32f405_timer_interrupt, s);
 }
 
 static const VMStateDescription vmstate_stm32f405_timer = {
     .name = "stm32f405_timer",
     .version_id = 1,
     .minimum_version_id = 1,
-    .pre_save = stm32f405_timer_pre_save,
-    .post_load = stm32f405_timer_post_load,
     .fields = (VMStateField[]) {
         VMSTATE_UINT32(tick_offset_vmstate, STM32f405TimerState),
         VMSTATE_UINT32(tim_cr1, STM32f405TimerState),
