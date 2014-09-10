@@ -1,5 +1,5 @@
 /*
- * STM32F405xx Timer
+ * STM32F405 Timer
  *
  * Copyright (c) 2014 Alistair Francis <alistair@alistair23.me>
  *
@@ -57,8 +57,8 @@
 
 #define TIM_DIER_UIE  1
 
-#define TYPE_STM32F405_TIMER "stm32f405xx-timer"
-#define STM32F405xxTIMER(obj) OBJECT_CHECK(STM32f405TimerState, (obj), TYPE_STM32F405_TIMER)
+#define TYPE_STM32F405_TIMER "stm32f405-timer"
+#define STM32F405TIMER(obj) OBJECT_CHECK(STM32f405TimerState, (obj), TYPE_STM32F405_TIMER)
 
 typedef struct STM32f405TimerState {
     /* <private> */

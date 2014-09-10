@@ -1,5 +1,5 @@
 /*
- * STM32F405xx USART
+ * STM32F405 USART
  *
  * Copyright (c) 2014 Alistair Francis <alistair@alistair23.me>
  *
@@ -30,13 +30,13 @@
 
 #define DB_PRINT_L(lvl, fmt, args...) do { \
     if (STM_USART_ERR_DEBUG >= lvl) { \
-        qemu_log("stm32f405xx_usart: %s:" fmt, __func__, ## args); \
+        qemu_log("stm32f405_usart: %s:" fmt, __func__, ## args); \
     } \
 } while (0);
 
 #define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
 
-static int stm32f405xx_usart_can_receive(void *opaque)
+static int stm32f405_usart_can_receive(void *opaque)
 {
     STM32f405UsartState *s = opaque;
 
@@ -47,7 +47,7 @@ static int stm32f405xx_usart_can_receive(void *opaque)
     return 0;
 }
 
-static void stm32f405xx_usart_receive(void *opaque, const uint8_t *buf, int size)
+static void stm32f405_usart_receive(void *opaque, const uint8_t *buf, int size)
 {
     STM32f405UsartState *s = opaque;
 
@@ -62,9 +62,9 @@ static void stm32f405xx_usart_receive(void *opaque, const uint8_t *buf, int size
     DB_PRINT("Receiving: %c\n", s->usart_dr);
 }
 
-static void stm32f405xx_usart_reset(DeviceState *dev)
+static void stm32f405_usart_reset(DeviceState *dev)
 {
-    STM32f405UsartState *s = STM32F405xx_USART(dev);
+    STM32f405UsartState *s = STM32F405_USART(dev);
 
     s->usart_sr = 0x00C00000;
     s->usart_dr = 0x00000000;
@@ -75,7 +75,7 @@ static void stm32f405xx_usart_reset(DeviceState *dev)
     s->usart_gtpr = 0x00000000;
 }
 
-static uint64_t stm32f405xx_usart_read(void *opaque, hwaddr addr,
+static uint64_t stm32f405_usart_read(void *opaque, hwaddr addr,
                                        unsigned int size)
 {
     STM32f405UsartState *s = opaque;
@@ -104,7 +104,7 @@ static uint64_t stm32f405xx_usart_read(void *opaque, hwaddr addr,
         return s->usart_gtpr;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "STM32F405xx_usart_read: Bad offset " \
+                      "STM32F405_usart_read: Bad offset " \
                       "0x%"HWADDR_PRIx"\n", addr);
         return 0;
     }
@@ -112,7 +112,7 @@ static uint64_t stm32f405xx_usart_read(void *opaque, hwaddr addr,
     return 0;
 }
 
-static void stm32f405xx_usart_write(void *opaque, hwaddr addr,
+static void stm32f405_usart_write(void *opaque, hwaddr addr,
                        uint64_t val64, unsigned int size)
 {
     STM32f405UsartState *s = opaque;
@@ -155,53 +155,53 @@ static void stm32f405xx_usart_write(void *opaque, hwaddr addr,
         return;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "STM32F405xx_usart_write: Bad offset " \
+                      "STM32F405_usart_write: Bad offset " \
                       "0x%"HWADDR_PRIx"\n", addr);
     }
 }
 
-static const MemoryRegionOps stm32f405xx_usart_ops = {
-    .read = stm32f405xx_usart_read,
-    .write = stm32f405xx_usart_write,
+static const MemoryRegionOps stm32f405_usart_ops = {
+    .read = stm32f405_usart_read,
+    .write = stm32f405_usart_write,
     .endianness = DEVICE_NATIVE_ENDIAN,
 };
 
-static void stm32f405xx_usart_init(Object *obj)
+static void stm32f405_usart_init(Object *obj)
 {
-    STM32f405UsartState *s = STM32F405xx_USART(obj);
+    STM32f405UsartState *s = STM32F405_USART(obj);
 
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
-    memory_region_init_io(&s->mmio, obj, &stm32f405xx_usart_ops, s,
+    memory_region_init_io(&s->mmio, obj, &stm32f405_usart_ops, s,
                           TYPE_STM32F405_USART, 0x2000);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->mmio);
 
     s->chr = qemu_char_get_next_serial();
 
     if (s->chr) {
-        qemu_chr_add_handlers(s->chr, stm32f405xx_usart_can_receive,
-                              stm32f405xx_usart_receive, NULL, s);
+        qemu_chr_add_handlers(s->chr, stm32f405_usart_can_receive,
+                              stm32f405_usart_receive, NULL, s);
     }
 }
 
-static void stm32f405xx_usart_class_init(ObjectClass *klass, void *data)
+static void stm32f405_usart_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
 
-    dc->reset = stm32f405xx_usart_reset;
+    dc->reset = stm32f405_usart_reset;
 }
 
-static const TypeInfo stm32f405xx_usart_info = {
+static const TypeInfo stm32f405_usart_info = {
     .name          = TYPE_STM32F405_USART,
     .parent        = TYPE_SYS_BUS_DEVICE,
     .instance_size = sizeof(STM32f405UsartState),
-    .instance_init = stm32f405xx_usart_init,
-    .class_init    = stm32f405xx_usart_class_init,
+    .instance_init = stm32f405_usart_init,
+    .class_init    = stm32f405_usart_class_init,
 };
 
-static void stm32f405xx_usart_register_types(void)
+static void stm32f405_usart_register_types(void)
 {
-    type_register_static(&stm32f405xx_usart_info);
+    type_register_static(&stm32f405_usart_info);
 }
 
-type_init(stm32f405xx_usart_register_types)
+type_init(stm32f405_usart_register_types)

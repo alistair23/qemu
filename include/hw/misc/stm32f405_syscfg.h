@@ -1,5 +1,5 @@
 /*
- * STM32F405xx SYSCFG
+ * STM32F405 SYSCFG
  *
  * Copyright (c) 2014 Alistair Francis <alistair@alistair23.me>
  *
@@ -36,9 +36,9 @@
 #define SYSCFG_EXTICR4 0x14
 #define SYSCFG_CMPCR   0x20
 
-#define TYPE_STM32F405xx_SYSCFG "stm32f405xx-syscfg"
-#define STM32F405xx_SYSCFG(obj) \
-    OBJECT_CHECK(STM32f405SyscfgState, (obj), TYPE_STM32F405xx_SYSCFG)
+#define TYPE_STM32F405_SYSCFG "stm32f405-syscfg"
+#define STM32F405_SYSCFG(obj) \
+    OBJECT_CHECK(STM32f405SyscfgState, (obj), TYPE_STM32F405_SYSCFG)
 
 typedef struct {
     /* <private> */

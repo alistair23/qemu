@@ -1,5 +1,5 @@
 /*
- * STM32F405xx EXTI
+ * STM32F405 EXTI
  *
  * Copyright (c) 2014 Alistair Francis <alistair@alistair23.me>
  *
@@ -32,7 +32,7 @@
 
 #define DB_PRINT_L(lvl, fmt, args...) do { \
     if (ST_EXTI_ERR_DEBUG >= lvl) { \
-        fprintf(stderr, "stm32f405xx_exti: %s:" fmt, __func__, ## args); \
+        fprintf(stderr, "stm32f405_exti: %s:" fmt, __func__, ## args); \
     } \
 } while (0);
 
@@ -49,9 +49,9 @@
 
 #define NUM_INTERRUPT_OUT_LINES 15
 
-#define TYPE_STM32F405xx_EXTI "stm32f405xx-exti"
-#define STM32F405xx_EXTI(obj) \
-    OBJECT_CHECK(STM32f405ExtiState, (obj), TYPE_STM32F405xx_EXTI)
+#define TYPE_STM32F405_EXTI "stm32f405-exti"
+#define STM32F405_EXTI(obj) \
+    OBJECT_CHECK(STM32f405ExtiState, (obj), TYPE_STM32F405_EXTI)
 
 typedef struct {
     SysBusDevice parent_obj;
@@ -68,9 +68,9 @@ typedef struct {
     qemu_irq* irq;
 } STM32f405ExtiState;
 
-static void stm32f405xx_exti_reset(DeviceState *dev)
+static void stm32f405_exti_reset(DeviceState *dev)
 {
-    STM32f405ExtiState *s = STM32F405xx_EXTI(dev);
+    STM32f405ExtiState *s = STM32F405_EXTI(dev);
 
     s->exti_imr = 0x00000000;
     s->exti_emr = 0x00000000;
@@ -80,7 +80,7 @@ static void stm32f405xx_exti_reset(DeviceState *dev)
     s->exti_pr = 0x00000000;
 }
 
-static void stm32f405xx_exti_set_irq(void * opaque, int irq, int level)
+static void stm32f405_exti_set_irq(void * opaque, int irq, int level)
 {
     STM32f405ExtiState *s = opaque;
     DeviceState *syscfg = NULL;
@@ -88,9 +88,9 @@ static void stm32f405xx_exti_set_irq(void * opaque, int irq, int level)
     /* I don't like this at all */
 
     syscfg = qdev_find_recursive(sysbus_get_default(),
-                                 "stm32f405xx-syscfg");
+                                 "stm32f405-syscfg");
 
-    STM32f405SyscfgState *s_slave = STM32F405xx_SYSCFG(syscfg);
+    STM32f405SyscfgState *s_slave = STM32F405_SYSCFG(syscfg);
 
     if (s_slave->syscfg_exticr1 & 0xFF) {
         qemu_irq_pulse(s->irq[0]);
@@ -149,7 +149,7 @@ static void stm32f405xx_exti_set_irq(void * opaque, int irq, int level)
     }
 }
 
-static uint64_t stm32f405xx_exti_read(void *opaque, hwaddr addr,
+static uint64_t stm32f405_exti_read(void *opaque, hwaddr addr,
                                      unsigned int size)
 {
     STM32f405ExtiState *s = opaque;
@@ -171,13 +171,13 @@ static uint64_t stm32f405xx_exti_read(void *opaque, hwaddr addr,
         return s->exti_pr;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "STM32F405xx_exti_read: Bad offset %x\n", (int)addr);
+                      "STM32F405_exti_read: Bad offset %x\n", (int)addr);
         return 0;
     }
     return 0;
 }
 
-static void stm32f405xx_exti_write(void *opaque, hwaddr addr,
+static void stm32f405_exti_write(void *opaque, hwaddr addr,
                        uint64_t val64, unsigned int size)
 {
     STM32f405ExtiState *s = opaque;
@@ -206,19 +206,19 @@ static void stm32f405xx_exti_write(void *opaque, hwaddr addr,
         return;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "STM32F405xx_exti_write: Bad offset %x\n", (int)addr);
+                      "STM32F405_exti_write: Bad offset %x\n", (int)addr);
     }
 }
 
-static const MemoryRegionOps stm32f405xx_exti_ops = {
-    .read = stm32f405xx_exti_read,
-    .write = stm32f405xx_exti_write,
+static const MemoryRegionOps stm32f405_exti_ops = {
+    .read = stm32f405_exti_read,
+    .write = stm32f405_exti_write,
     .endianness = DEVICE_NATIVE_ENDIAN,
 };
 
-static void stm32f405xx_exti_init(Object *obj)
+static void stm32f405_exti_init(Object *obj)
 {
-    STM32f405ExtiState *s = STM32F405xx_EXTI(obj);
+    STM32f405ExtiState *s = STM32F405_EXTI(obj);
     int i;
 
     s->irq = g_new0(qemu_irq, NUM_INTERRUPT_OUT_LINES);
@@ -226,32 +226,32 @@ static void stm32f405xx_exti_init(Object *obj)
         sysbus_init_irq(SYS_BUS_DEVICE(obj), s->irq);
     }
 
-    memory_region_init_io(&s->mmio, obj, &stm32f405xx_exti_ops, s,
-                          TYPE_STM32F405xx_EXTI, 0x2000);
+    memory_region_init_io(&s->mmio, obj, &stm32f405_exti_ops, s,
+                          TYPE_STM32F405_EXTI, 0x2000);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->mmio);
 
-    qdev_init_gpio_in(DEVICE(obj), stm32f405xx_exti_set_irq,
+    qdev_init_gpio_in(DEVICE(obj), stm32f405_exti_set_irq,
                       NUM_GPIO_EVENT_IN_LINES);
 }
 
-static void stm32f405xx_exti_class_init(ObjectClass *klass, void *data)
+static void stm32f405_exti_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
 
-    dc->reset = stm32f405xx_exti_reset;
+    dc->reset = stm32f405_exti_reset;
 }
 
-static const TypeInfo stm32f405xx_exti_info = {
-    .name          = TYPE_STM32F405xx_EXTI,
+static const TypeInfo stm32f405_exti_info = {
+    .name          = TYPE_STM32F405_EXTI,
     .parent        = TYPE_SYS_BUS_DEVICE,
     .instance_size = sizeof(STM32f405ExtiState),
-    .instance_init = stm32f405xx_exti_init,
-    .class_init    = stm32f405xx_exti_class_init,
+    .instance_init = stm32f405_exti_init,
+    .class_init    = stm32f405_exti_class_init,
 };
 
-static void stm32f405xx_exti_register_types(void)
+static void stm32f405_exti_register_types(void)
 {
-    type_register_static(&stm32f405xx_exti_info);
+    type_register_static(&stm32f405_exti_info);
 }
 
-type_init(stm32f405xx_exti_register_types)
+type_init(stm32f405_exti_register_types)

@@ -1,5 +1,5 @@
 /*
- * STM32F405xx USART
+ * STM32F405 USART
  *
  * Copyright (c) 2014 Alistair Francis <alistair@alistair23.me>
  *
@@ -42,8 +42,8 @@
 #define USART_CR1_RXNEIE  (1 << 5)
 #define USART_CR1_TE  (1 << 3)
 
-#define TYPE_STM32F405_USART "stm32f405xx-usart"
-#define STM32F405xx_USART(obj) \
+#define TYPE_STM32F405_USART "stm32f405-usart"
+#define STM32F405_USART(obj) \
     OBJECT_CHECK(STM32f405UsartState, (obj), TYPE_STM32F405_USART)
 
 typedef struct {

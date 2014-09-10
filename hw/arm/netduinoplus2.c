@@ -137,8 +137,8 @@ static void netduinoplus2_init(MachineState *machine)
     }
 
     /* System configuration controller */
-    dev = qdev_create(NULL, "stm32f405xx-syscfg");
-    dev->id = "stm32f405xx-syscfg";
+    dev = qdev_create(NULL, "stm32f405-syscfg");
+    dev->id = "stm32f405-syscfg";
     qdev_init_nofail(dev);
     busdev = SYS_BUS_DEVICE(dev);
     sysbus_mmio_map(busdev, 0, 0x40013800);
@@ -146,20 +146,20 @@ static void netduinoplus2_init(MachineState *machine)
 
     /* Attach UART (uses USART registers) and USART controllers */
     for (i = 0; i < 7; i++) {
-        sysbus_create_simple("stm32f405xx-usart", usart_addr[i],
+        sysbus_create_simple("stm32f405-usart", usart_addr[i],
                              pic[usart_irq[i]]);
     }
 
     /* Timer 2 to 5 */
     for (i = 0; i < 4; i++) {
-        sysbus_create_simple("stm32f405xx-timer", tim2_5_addr[i],
+        sysbus_create_simple("stm32f405-timer", tim2_5_addr[i],
                              pic[tim2_5_irq[i]]);
     }
 
     /* Attach GPIO devices */
     for (i = 0; i < 11; i++) {
-        gpio[i] = qdev_create(NULL, "stm32f405xx-gpio");
-        sprintf(gpio_name, "stm32f405xx-gpio-%c", gpio_letters[i]);
+        gpio[i] = qdev_create(NULL, "stm32f405-gpio");
+        sprintf(gpio_name, "stm32f405-gpio-%c", gpio_letters[i]);
         dev->id = gpio_name;
         qdev_prop_set_uint8(gpio[i], "gpio-letter", gpio_letters[i]);
         qdev_init_nofail(gpio[i]);
@@ -173,12 +173,12 @@ static void netduinoplus2_init(MachineState *machine)
 
     /* Attach the ADC */
     for (i = 0; i < 3; i++) {
-        sysbus_create_simple("stm32f405xx-adc", 0x40012000 + (i * 0x100),
+        sysbus_create_simple("stm32f405-adc", 0x40012000 + (i * 0x100),
                              pic[18]);
     }
 
     /* Attach the External Interrupt device */
-    dev = qdev_create(NULL, "stm32f405xx-exti");
+    dev = qdev_create(NULL, "stm32f405-exti");
     qdev_init_nofail(dev);
     busdev = SYS_BUS_DEVICE(dev);
     sysbus_mmio_map(busdev, 0, 0x40013C00);

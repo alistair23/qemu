@@ -1,5 +1,5 @@
 /*
- * STM32F405xx Timer
+ * STM32F405 Timer
  *
  * Copyright (c) 2014 Alistair Francis <alistair@alistair23.me>
  *
@@ -30,13 +30,13 @@
 
 #define DB_PRINT_L(lvl, fmt, args...) do { \
     if (STM_TIMER_ERR_DEBUG >= lvl) { \
-        qemu_log("stm32f405xx_timer: %s:" fmt, __func__, ## args); \
+        qemu_log("stm32f405_timer: %s:" fmt, __func__, ## args); \
     } \
 } while (0);
 
 #define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
 
-static void stm32f405xx_timer_interrupt(void *opaque)
+static void stm32f405_timer_interrupt(void *opaque)
 {
     STM32f405TimerState *s = opaque;
 
@@ -48,7 +48,7 @@ static void stm32f405xx_timer_interrupt(void *opaque)
     }
 }
 
-static void stm32f405xx_timer_set_alarm(STM32f405TimerState *s)
+static void stm32f405_timer_set_alarm(STM32f405TimerState *s)
 {
     uint32_t ticks;
     int64_t now;
@@ -63,16 +63,16 @@ static void stm32f405xx_timer_set_alarm(STM32f405TimerState *s)
 
     if (ticks == 0) {
         timer_del(s->timer);
-        stm32f405xx_timer_interrupt(s);
+        stm32f405_timer_interrupt(s);
     } else {
         timer_mod(s->timer, now + (int64_t)ticks);
         DB_PRINT("Wait Time: 0x%x\n", (uint32_t) (now + ticks));
     }
 }
 
-static void stm32f405xx_timer_reset(DeviceState *dev)
+static void stm32f405_timer_reset(DeviceState *dev)
 {
-    STM32f405TimerState *s = STM32F405xxTIMER(dev);
+    STM32f405TimerState *s = STM32F405TIMER(dev);
 
     s->tim_cr1 = 0;
     s->tim_cr2 = 0;
@@ -95,7 +95,7 @@ static void stm32f405xx_timer_reset(DeviceState *dev)
     s->tim_or = 0;
 }
 
-static uint64_t stm32f405xx_timer_read(void *opaque, hwaddr offset,
+static uint64_t stm32f405_timer_read(void *opaque, hwaddr offset,
                            unsigned size)
 {
     STM32f405TimerState *s = opaque;
@@ -143,13 +143,13 @@ static uint64_t stm32f405xx_timer_read(void *opaque, hwaddr offset,
         return s->tim_or;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "STM32F405xx_timer_write: Bad offset %x\n", (int) offset);
+                      "STM32F405_timer_write: Bad offset %x\n", (int) offset);
     }
 
     return 0;
 }
 
-static void stm32f405xx_timer_write(void *opaque, hwaddr offset,
+static void stm32f405_timer_write(void *opaque, hwaddr offset,
                         uint64_t val64, unsigned size)
 {
     STM32f405TimerState *s = opaque;
@@ -173,13 +173,13 @@ static void stm32f405xx_timer_write(void *opaque, hwaddr offset,
         return;
     case TIM_SR:
         s->tim_sr &= value;
-        stm32f405xx_timer_set_alarm(s);
+        stm32f405_timer_set_alarm(s);
         return;
     case TIM_EGR:
         s->tim_egr = value;
         if (s->tim_egr & 1) {
             /* Re-init the counter */
-            stm32f405xx_timer_reset(DEVICE(s));
+            stm32f405_timer_reset(DEVICE(s));
         }
         return;
     case TIM_CCMR1:
@@ -207,14 +207,14 @@ register. TIMx_CCR1 preload value is loaded in the active register at each updat
         return;
     case TIM_CNT:
         s->tim_cnt = value;
-        stm32f405xx_timer_set_alarm(s);
+        stm32f405_timer_set_alarm(s);
         return;
     case TIM_PSC:
         s->tim_psc = value;
         return;
     case TIM_ARR:
         s->tim_arr = value;
-        stm32f405xx_timer_set_alarm(s);
+        stm32f405_timer_set_alarm(s);
         return;
     case TIM_CCR1:
         s->tim_ccr1 = value;
@@ -239,35 +239,35 @@ register. TIMx_CCR1 preload value is loaded in the active register at each updat
         return;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "STM32F405xx_timer_write: Bad offset %x\n", (int) offset);
+                      "STM32F405_timer_write: Bad offset %x\n", (int) offset);
     }
 }
 
-static const MemoryRegionOps stm32f405xx_timer_ops = {
-    .read = stm32f405xx_timer_read,
-    .write = stm32f405xx_timer_write,
+static const MemoryRegionOps stm32f405_timer_ops = {
+    .read = stm32f405_timer_read,
+    .write = stm32f405_timer_write,
     .endianness = DEVICE_NATIVE_ENDIAN,
 };
 
-static void stm32f405xx_timer_init(Object *obj)
+static void stm32f405_timer_init(Object *obj)
 {
-    STM32f405TimerState *s = STM32F405xxTIMER(obj);
+    STM32f405TimerState *s = STM32F405TIMER(obj);
     struct tm tm;
 
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
-    memory_region_init_io(&s->iomem, obj, &stm32f405xx_timer_ops, s,
-                          "stm32f405xx_timer", 0x2000);
+    memory_region_init_io(&s->iomem, obj, &stm32f405_timer_ops, s,
+                          "stm32f405_timer", 0x2000);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->iomem);
 
     qemu_get_timedate(&tm, 0);
     s->tick_offset = mktimegm(&tm) -
         qemu_clock_get_ns(rtc_clock) / get_ticks_per_sec();
 
-    s->timer = timer_new_ns(rtc_clock, stm32f405xx_timer_interrupt, s);
+    s->timer = timer_new_ns(rtc_clock, stm32f405_timer_interrupt, s);
 }
 
-static void stm32f405xx_timer_pre_save(void *opaque)
+static void stm32f405_timer_pre_save(void *opaque)
 {
     STM32f405TimerState *s = opaque;
 
@@ -277,7 +277,7 @@ static void stm32f405xx_timer_pre_save(void *opaque)
     s->tick_offset_vmstate = s->tick_offset + delta / get_ticks_per_sec();
 }
 
-static int stm32f405xx_timer_post_load(void *opaque, int version_id)
+static int stm32f405_timer_post_load(void *opaque, int version_id)
 {
     STM32f405TimerState *s = opaque;
 
@@ -285,16 +285,16 @@ static int stm32f405xx_timer_post_load(void *opaque, int version_id)
                     qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
 
     s->tick_offset = s->tick_offset_vmstate - delta / get_ticks_per_sec();
-    stm32f405xx_timer_set_alarm(s);
+    stm32f405_timer_set_alarm(s);
     return 0;
 }
 
-static const VMStateDescription vmstate_stm32f405xx_timer = {
-    .name = "stm32f405xx_timer",
+static const VMStateDescription vmstate_stm32f405_timer = {
+    .name = "stm32f405_timer",
     .version_id = 1,
     .minimum_version_id = 1,
-    .pre_save = stm32f405xx_timer_pre_save,
-    .post_load = stm32f405xx_timer_post_load,
+    .pre_save = stm32f405_timer_pre_save,
+    .post_load = stm32f405_timer_post_load,
     .fields = (VMStateField[]) {
         VMSTATE_UINT32(tick_offset_vmstate, STM32f405TimerState),
         VMSTATE_UINT32(tim_cr1, STM32f405TimerState),
@@ -320,25 +320,25 @@ static const VMStateDescription vmstate_stm32f405xx_timer = {
     }
 };
 
-static void stm32f405xx_timer_class_init(ObjectClass *klass, void *data)
+static void stm32f405_timer_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
 
-    dc->vmsd = &vmstate_stm32f405xx_timer;
-    dc->reset = stm32f405xx_timer_reset;
+    dc->vmsd = &vmstate_stm32f405_timer;
+    dc->reset = stm32f405_timer_reset;
 }
 
-static const TypeInfo stm32f405xx_timer_info = {
+static const TypeInfo stm32f405_timer_info = {
     .name          = TYPE_STM32F405_TIMER,
     .parent        = TYPE_SYS_BUS_DEVICE,
     .instance_size = sizeof(STM32f405TimerState),
-    .instance_init = stm32f405xx_timer_init,
-    .class_init    = stm32f405xx_timer_class_init,
+    .instance_init = stm32f405_timer_init,
+    .class_init    = stm32f405_timer_class_init,
 };
 
-static void stm32f405xx_timer_register_types(void)
+static void stm32f405_timer_register_types(void)
 {
-    type_register_static(&stm32f405xx_timer_info);
+    type_register_static(&stm32f405_timer_info);
 }
 
-type_init(stm32f405xx_timer_register_types)
+type_init(stm32f405_timer_register_types)

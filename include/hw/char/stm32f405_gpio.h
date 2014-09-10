@@ -1,5 +1,5 @@
 /*
- * STM32F405xx GPIO
+ * STM32F405 GPIO
  *
  * Copyright (c) 2014 Alistair Francis <alistair@alistair23.me>
  *
@@ -41,9 +41,9 @@
 #define GPIO_MODER_ALT         2
 #define GPIO_MODER_ANALOG      3
 
-#define TYPE_STM32F405xx_GPIO "stm32f405xx-gpio"
-#define STM32F405xx_GPIO(obj) OBJECT_CHECK(Stm32f405GpioState, (obj), \
-                           TYPE_STM32F405xx_GPIO)
+#define TYPE_STM32F405_GPIO "stm32f405-gpio"
+#define STM32F405_GPIO(obj) OBJECT_CHECK(Stm32f405GpioState, (obj), \
+                           TYPE_STM32F405_GPIO)
 
 typedef struct Stm32f405GpioState {
     SysBusDevice parent_obj;
