@@ -22,6 +22,9 @@
  * THE SOFTWARE.
  */
 
+#ifndef HW_STM_TIMER_H
+#define HW_STM_TIMER_H
+
 #include "hw/sysbus.h"
 #include "qemu/timer.h"
 #include "sysemu/sysemu.h"
@@ -89,3 +92,5 @@ typedef struct STM32f405TimerState {
     uint32_t tim_dmar;
     uint32_t tim_or;
 } Stm32f405TimerState;
+
+#endif
