@@ -40,7 +40,8 @@ static int stm32f405_usart_can_receive(void *opaque)
 {
     STM32f405UsartState *s = opaque;
 
-    if (s->usart_cr1 & USART_CR1_UE && s->usart_cr1 & USART_CR1_TE) {
+    if (s->usart_cr1 & USART_CR1_UE && s->usart_cr1 & USART_CR1_RE &&
+        !(s->usart_sr & USART_SR_RXNE)) {
         return 1;
     }
 
@@ -86,11 +87,15 @@ static uint64_t stm32f405_usart_read(void *opaque, hwaddr addr,
     switch (addr) {
     case USART_SR:
         retvalue = s->usart_sr;
-        s->usart_sr &= (USART_SR_TC ^ 0xFFFF);
+        s->usart_sr &= ~USART_SR_TC;
+        if (s->chr) {
+            qemu_chr_accept_input(s->chr);
+        }
         return retvalue;
     case USART_DR:
         DB_PRINT("Value: 0x%x, %c\n", s->usart_dr, (char) s->usart_dr);
         s->usart_sr |= USART_SR_TXE;
+        s->usart_sr &= ~USART_SR_RXNE;
         return s->usart_dr & 0x3FF;
     case USART_BRR:
         return s->usart_brr;
@@ -136,6 +141,7 @@ static void stm32f405_usart_write(void *opaque, hwaddr addr,
                 qemu_chr_fe_write_all(s->chr, &ch, 1);
             }
             s->usart_sr |= USART_SR_TC;
+            s->usart_sr &= ~USART_SR_TXE;
         }
         return;
     case USART_BRR:

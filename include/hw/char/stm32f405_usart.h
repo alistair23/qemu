@@ -41,6 +41,7 @@
 #define USART_CR1_UE  (1 << 13)
 #define USART_CR1_RXNEIE  (1 << 5)
 #define USART_CR1_TE  (1 << 3)
+#define USART_CR1_RE  (1 << 2)
 
 #define TYPE_STM32F405_USART "stm32f405-usart"
 #define STM32F405_USART(obj) \
