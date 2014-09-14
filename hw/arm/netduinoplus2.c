@@ -187,7 +187,7 @@ static void netduinoplus2_init(MachineState *machine)
                                    pic[spi_irq[i]]);
         if (i == 1) {
             bus = qdev_get_child_bus(dev, "ssi");
-            nrf24l01plus = ssi_create_slave(bus, "ssi-sd");
+            nrf24l01plus = ssi_create_slave(bus, "nrf24l01plus");
         }
     }
 
