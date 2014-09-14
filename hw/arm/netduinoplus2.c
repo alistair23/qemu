@@ -70,8 +70,10 @@ static void netduinoplus2_init(MachineState *machine)
     static const uint32_t usart_addr[] = { 0x40011000, 0x40004400,
         0x40004800, 0x40004C00, 0x40005000, 0x40011400, 0x40007800,
         0x40007C00 };
+    static const uint32_t spi_addr[] = { 0x40013000, 0x40003800, 0x40003C00, 0x40013400, 0x40015000, 0x40015400 };
     const char *kernel_filename = machine->kernel_filename;
 
+    static const int spi_irq[] = {35, 36, 51, 0, 0, 0};
     static const int timer_irq[] = {28, 29, 30, 50};
     static const int usart_irq[] = {37, 38, 39, 52, 53, 71, 82, 83};
     static const int exti_irq[] = {6, 7, 8, 9, 10, 23, 23, 23, 23, 23, 40, 40, 40, 40, 40, 40};
@@ -175,6 +177,12 @@ static void netduinoplus2_init(MachineState *machine)
     for (i = 0; i < 3; i++) {
         sysbus_create_simple("stm32f405-adc", 0x40012000 + (i * 0x100),
                              pic[18]);
+    }
+
+    /* Attach the SPI Controller */
+    for (i = 0; i < 6; i++) {
+        dev = sysbus_create_simple("stm32f405-spi", spi_addr[i],
+                                   pic[spi_irq[i]]);
     }
 
     /* Attach the External Interrupt device */
