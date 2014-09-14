@@ -163,7 +163,7 @@ static void armv7m_reset(void *opaque)
 }
 
 /* Init CPU and memory for a v7-M based board.
-   flash_size and sram_size are in kb.
+   flash_size and sram_size are in bytes.
    Returns the NVIC array.  */
 
 qemu_irq *armv7m_init(MemoryRegion *system_memory,
@@ -180,12 +180,7 @@ qemu_irq *armv7m_init(MemoryRegion *system_memory,
     uint64_t lowaddr;
     int i;
     int big_endian;
-    MemoryRegion *sram = g_new(MemoryRegion, 1);
-    MemoryRegion *flash = g_new(MemoryRegion, 1);
     MemoryRegion *hack = g_new(MemoryRegion, 1);
-
-    flash_size *= 1024;
-    sram_size *= 1024;
 
     if (cpu_model == NULL) {
 	cpu_model = "cortex-m3";
@@ -209,14 +204,6 @@ qemu_irq *armv7m_init(MemoryRegion *system_memory,
     code_size = ram_size - sram_size;
 #endif
 
-    /* Flash programming is done via the SCU, so pretend it is ROM.  */
-    memory_region_init_ram(flash, NULL, "armv7m.flash", flash_size);
-    vmstate_register_ram_global(flash);
-    memory_region_set_readonly(flash, true);
-    memory_region_add_subregion(system_memory, 0, flash);
-    memory_region_init_ram(sram, NULL, "armv7m.sram", sram_size);
-    vmstate_register_ram_global(sram);
-    memory_region_add_subregion(system_memory, 0x20000000, sram);
     armv7m_bitband_init();
 
     nvic = qdev_create(NULL, "armv7m_nvic");
