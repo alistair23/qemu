@@ -58,7 +58,8 @@
 #define TIM_DIER_UIE  1
 
 #define TYPE_STM32F405_TIMER "stm32f405-timer"
-#define STM32F405TIMER(obj) OBJECT_CHECK(STM32f405TimerState, (obj), TYPE_STM32F405_TIMER)
+#define STM32F405TIMER(obj) OBJECT_CHECK(STM32f405TimerState, \
+                            (obj), TYPE_STM32F405_TIMER)
 
 typedef struct STM32f405TimerState {
     /* <private> */
