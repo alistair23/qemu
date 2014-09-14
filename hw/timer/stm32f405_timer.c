@@ -40,12 +40,22 @@ static void stm32f405_timer_interrupt(void *opaque)
 {
     STM32f405TimerState *s = opaque;
 
-    DB_PRINT("Interrupt in: %s\n", __func__);
+    DB_PRINT("Interrupt\n");
 
     if (s->tim_dier & TIM_DIER_UIE && s->tim_cr1 & TIM_CR1_CEN) {
         s->tim_sr |= 1;
         qemu_irq_pulse(s->irq);
     }
+
+    if (s->tim_ccmr1 & (TIM_CCMR1_OC2M2 + TIM_CCMR1_OC2M1) &&
+        !(s->tim_ccmr1 & TIM_CCMR1_OC2M0) &&
+        (s->tim_ccmr1 & TIM_CCMR1_OC2PE)) {
+        /* PWM 2 - Mode 1 */
+        // This might need to be calculated better
+        fprintf(stderr, "Values: %d and %d\n", s->tim_ccr2, s->tim_psc);
+        DB_PRINT("Duty Cycle: %d%%\n", (uint) s->tim_ccr2 / (100 * (s->tim_psc + 1)));
+    }
+
 }
 
 static void stm32f405_timer_set_alarm(STM32f405TimerState *s)
@@ -122,6 +132,8 @@ static uint64_t stm32f405_timer_read(void *opaque, hwaddr offset,
     case TIM_CCER:
         return s->tim_ccer;
     case TIM_CNT:
+        s->tim_cnt = s->tick_offset + (qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) /
+                                       get_ticks_per_sec());
         return s->tim_cnt;
     case TIM_PSC:
         return s->tim_psc;
@@ -176,21 +188,13 @@ static void stm32f405_timer_write(void *opaque, hwaddr offset,
         return;
     case TIM_EGR:
         s->tim_egr = value;
-        if (s->tim_egr & 1) {
+        if (s->tim_egr & TIM_EGR_UG) {
             /* Re-init the counter */
             stm32f405_timer_reset(DEVICE(s));
         }
         return;
     case TIM_CCMR1:
         s->tim_ccmr1 = value;
-        if (s->tim_ccmr1 & 3) {
-            /* Output compare mode */
-            if (s->tim_ccmr1 & (TIM_CCMR1_OC2M2 + TIM_CCMR1_OC2M1)) {
-                /* PWM Mode 2 */
-/* In upcounting, channel 2 is active as long as TIMx_CNT<TIMx_CCR2
-else inactive */
-            }
-        }
                 /* Output compare 2 preload enable */
 /* 1: Preload register on TIMx_CCR1 enabled. Read/Write operations access the preload
 register. TIMx_CCR1 preload value is loaded in the active register at each update event. */

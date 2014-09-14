@@ -51,9 +51,13 @@
 
 #define TIM_CR1_CEN   1
 
+#define TIM_EGR_UG 1
+
 #define TIM_CCER_CC2E   (1 << 4)
 #define TIM_CCMR1_OC2M2 (1 << 14)
 #define TIM_CCMR1_OC2M1 (1 << 13)
+#define TIM_CCMR1_OC2M0 (1 << 12)
+#define TIM_CCMR1_OC2PE (1 << 11)
 
 #define TIM_DIER_UIE  1
 
