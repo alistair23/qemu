@@ -43,6 +43,7 @@
 #define SPI_CR1_SPE  (1 << 6)
 
 #define SPI_SR_TXE   (1 << 1)
+#define SPI_SR_RXNE   1
 
 #define TYPE_STM32F405_SPI "stm32f405-spi"
 #define STM32F405_SPI(obj) \

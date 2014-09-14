@@ -25,7 +25,7 @@
 #include "hw/ssi/stm32f405_spi.h"
 
 #ifndef STM_SPI_ERR_DEBUG
-#define STM_SPI_ERR_DEBUG 1
+#define STM_SPI_ERR_DEBUG 0
 #endif
 
 #define DB_PRINT_L(lvl, fmt, args...) do { \
@@ -51,6 +51,13 @@ static void stm32f405_spi_reset(DeviceState *dev)
     s->spi_i2spr = 0x00000002;
 }
 
+static void stm32f405_spi_transfer(STM32f405SpiState *s)
+{
+    DB_PRINT("Data: 0x%x\n", s->spi_dr);
+
+    s->spi_dr = ssi_transfer(s->ssi, s->spi_dr);
+}
+
 static uint64_t stm32f405_spi_read(void *opaque, hwaddr addr,
                                      unsigned int size)
 {
@@ -65,8 +72,10 @@ static uint64_t stm32f405_spi_read(void *opaque, hwaddr addr,
         return s->spi_cr2;
     case SPI_SR:
         s->spi_sr |= SPI_SR_TXE;
+        s->spi_sr ^= SPI_SR_RXNE;
         return s->spi_sr;
     case SPI_DR:
+        stm32f405_spi_transfer(s);
         return s->spi_dr;
     case SPI_CPCPR:
         return s->spi_cpcpr;
@@ -107,6 +116,7 @@ static void stm32f405_spi_write(void *opaque, hwaddr addr,
         return;
     case SPI_DR:
         s->spi_dr = value;
+        stm32f405_spi_transfer(s);
         return;
     case SPI_CPCPR:
         s->spi_cpcpr = value;
