@@ -25,7 +25,7 @@
 #include "hw/ssi.h"
 
 #ifndef NRF24L01PLUS_ERR_DEBUG
-#define NRF24L01PLUS_ERR_DEBUG 1
+#define NRF24L01PLUS_ERR_DEBUG 0
 #endif
 
 #define DB_PRINT_L(lvl, fmt, args...) do { \
@@ -36,19 +36,91 @@
 
 #define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
 
+#define R_REGISTER 0b11100000
+#define W_REGISTER 0b11000000
+#define R_RX_PAYLOAD 0b10011110
+#define R_TX_PAYLOAD 0b01011111
+#define FLUSH_TX 0b00011110
+#define FLUSH_RX 0b00011101
+
+typedef enum {
+    NRF24L01P_CMD,
+    NRF24L01P_WRITE,
+    NRF24L01P_READ,
+    NRF24L01P_READ_RX_PAYLOAD,
+    NRF24L01P_WRITE_TX_PAYLOAD,
+    NRF24L01P_FLUSH_TX,
+    NRF24L01P_FLUSH_RX,
+} nrf24l01plus_mode;
+
 typedef struct {
     SSISlave ssidev;
+    nrf24l01plus_mode mode;
+    uint32_t register_map;
 } nrf24l01plus_state;
 
 static uint32_t nrf24l01plus_transfer(SSISlave *dev, uint32_t val)
 {
+    nrf24l01plus_state *s = FROM_SSI_SLAVE(nrf24l01plus_state, dev);
+
+    DB_PRINT("Mode is: %d; Value is: 0x%x\n", s->mode, val);
+
+    switch (s->mode) {
+    case NRF24L01P_CMD:
+        if (!(val & R_REGISTER)) {
+            s->mode = NRF24L01P_READ;
+            s->register_map = 0b11111 & val;
+        } else if (!(val & W_REGISTER)) {
+            s->mode = NRF24L01P_WRITE;
+            s->register_map = 0b11111 & val;
+        } else if (!(val & R_RX_PAYLOAD)) {
+            s->mode = NRF24L01P_READ_RX_PAYLOAD;
+        } else if (!(val & R_TX_PAYLOAD)) {
+            s->mode = NRF24L01P_WRITE_TX_PAYLOAD;
+        } else if (!(val & FLUSH_TX)) {
+            s->mode = NRF24L01P_FLUSH_TX;
+        } else if (!(val & FLUSH_RX)) {
+            s->mode = NRF24L01P_FLUSH_RX;
+        } else {
+            qemu_log_mask(LOG_UNIMP,
+                          "NRF24L01+_Transfer: Bad command or unimplemented 0x%x\n", val);
+        }
+        break;
+    case NRF24L01P_WRITE:
+        // write to register from register_map
+        s->mode = NRF24L01P_CMD;
+        break;
+    case NRF24L01P_READ:
+        // return register from register_map
+        s->mode = NRF24L01P_CMD;
+        return 0xFF;
+    case NRF24L01P_READ_RX_PAYLOAD:
+        // Read from internal FIFO
+        s->mode = NRF24L01P_CMD;
+        return 0xFF;
+    case NRF24L01P_WRITE_TX_PAYLOAD:
+        //Write TX payload
+        s->mode = NRF24L01P_CMD;
+        break;
+    case NRF24L01P_FLUSH_TX:
+        /* Flush the TX FIFO */
+        s->mode = NRF24L01P_CMD;
+        break;
+    case NRF24L01P_FLUSH_RX:
+        /* Flush the RX FIFO */
+        s->mode = NRF24L01P_CMD;
+        return 0xFF;
+    default:
+        return 1;
+    }
     return 0;
 }
 
 static int nrf24l01plus_init(SSISlave *d)
 {
-    //DeviceState *dev = DEVICE(d);
-    //nrf24l01plus_state *s = FROM_SSI_SLAVE(nrf24l01plus_state, d);
+    nrf24l01plus_state *s = FROM_SSI_SLAVE(nrf24l01plus_state, d);
+
+    s->mode = NRF24L01P_CMD;
 
     return 0;
 }
