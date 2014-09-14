@@ -167,14 +167,14 @@ static void armv7m_reset(void *opaque)
    Returns the NVIC array.  */
 
 qemu_irq *armv7m_init(MemoryRegion *system_memory,
-                      int flash_size, int sram_size,
+                      int flash_size, int sram_size, int num_irq,
                       const char *kernel_filename, const char *cpu_model)
 {
     ARMCPU *cpu;
     CPUARMState *env;
     DeviceState *nvic;
     /* FIXME: make this local state.  */
-    static qemu_irq pic[64];
+    qemu_irq *pic = g_new(qemu_irq, num_irq);
     int image_size;
     uint64_t entry;
     uint64_t lowaddr;
@@ -207,11 +207,12 @@ qemu_irq *armv7m_init(MemoryRegion *system_memory,
     armv7m_bitband_init();
 
     nvic = qdev_create(NULL, "armv7m_nvic");
+    qdev_prop_set_uint32(nvic, "num-irq", num_irq);
     env->nvic = nvic;
     qdev_init_nofail(nvic);
     sysbus_connect_irq(SYS_BUS_DEVICE(nvic), 0,
                        qdev_get_gpio_in(DEVICE(cpu), ARM_CPU_IRQ));
-    for (i = 0; i < 64; i++) {
+    for (i = 0; i < num_irq; i++) {
         pic[i] = qdev_get_gpio_in(nvic, i);
     }
 
