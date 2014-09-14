@@ -27,7 +27,7 @@
 #include "hw/misc/stm32f405_syscfg.h"
 
 #ifndef ST_EXTI_ERR_DEBUG
-#define ST_EXTI_ERR_DEBUG 1
+#define ST_EXTI_ERR_DEBUG 0
 #endif
 
 #define DB_PRINT_L(lvl, fmt, args...) do { \
