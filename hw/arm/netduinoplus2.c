@@ -92,7 +92,9 @@ static void netduinoplus2_init(MachineState *machine)
     DeviceState *nvic;
     DeviceState *gpio[11];
     DeviceState *dev;
+    DeviceState *nrf24l01plus;
     SysBusDevice *busdev;
+    void *bus;
     qemu_irq gpio_in[11][15];
     //qemu_irq gpio_out[11][15];
 
@@ -183,6 +185,10 @@ static void netduinoplus2_init(MachineState *machine)
     for (i = 0; i < 6; i++) {
         dev = sysbus_create_simple("stm32f405-spi", spi_addr[i],
                                    pic[spi_irq[i]]);
+        if (i == 1) {
+            bus = qdev_get_child_bus(dev, "ssi");
+            nrf24l01plus = ssi_create_slave(bus, "ssi-sd");
+        }
     }
 
     /* Attach the External Interrupt device */
