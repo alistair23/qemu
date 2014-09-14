@@ -155,11 +155,19 @@ static void armv7m_bitband_init(void)
 
 /* Board init.  */
 
-static void armv7m_reset(void *opaque)
-{
-    ARMCPU *cpu = opaque;
+typedef struct ARMV7MResetArgs {
+    ARMCPU *cpu;
+    uint32_t reset_pc;
+} ARMV7MResetArgs;
 
-    cpu_reset(CPU(cpu));
+ static void armv7m_reset(void *opaque)
+ {
+    ARMV7MResetArgs *args = opaque;
+
+    cpu_reset(CPU(args->cpu));
+
+    args->cpu->env.thumb = args->reset_pc & 1;
+    args->cpu->env.regs[15] = args->reset_pc & ~1;
 }
 
 /* Init CPU and memory for a v7-M based board.
@@ -181,6 +189,7 @@ qemu_irq *armv7m_init(MemoryRegion *system_memory,
     int i;
     int big_endian;
     MemoryRegion *hack = g_new(MemoryRegion, 1);
+    ARMV7MResetArgs *reset_args = g_new0(ARMV7MResetArgs, 1);
 
     if (cpu_model == NULL) {
 	cpu_model = "cortex-m3";
@@ -247,7 +256,11 @@ qemu_irq *armv7m_init(MemoryRegion *system_memory,
     vmstate_register_ram_global(hack);
     memory_region_add_subregion(system_memory, 0xfffff000, hack);
 
-    qemu_register_reset(armv7m_reset, cpu);
+    *reset_args = (ARMV7MResetArgs) {
+        .cpu = cpu,
+        .reset_pc = entry,
+    };
+    qemu_register_reset(armv7m_reset, reset_args);
     return pic;
 }
 
