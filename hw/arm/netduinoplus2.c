@@ -65,14 +65,14 @@ static void netduinoplus2_init(MachineState *machine)
     static const uint8_t gpio_letters[] = { 'a', 'b', 'c',
         'd', 'e', 'f', 'g', 'h',
         'i', 'j', 'k' };
-    static const uint32_t tim2_5_addr[] = { 0x40000000, 0x40000400,
+    static const uint32_t timer_addr[] = { 0x40000000, 0x40000400,
         0x40000800, 0x40000C00 };
     static const uint32_t usart_addr[] = { 0x40011000, 0x40004400,
         0x40004800, 0x40004C00, 0x40005000, 0x40011400, 0x40007800,
         0x40007C00 };
     const char *kernel_filename = machine->kernel_filename;
 
-    static const int tim2_5_irq[] = {28, 29, 30, 50};
+    static const int timer_irq[] = {28, 29, 30, 50};
     static const int usart_irq[] = {37, 38, 39, 52, 53, 71, 82, 83};
     static const int exti_irq[] = {6, 7, 8, 9, 10, 23, 23, 23, 23, 23, 40, 40, 40, 40, 40, 40};
     const char *cpu_model = machine->cpu_model;
@@ -152,8 +152,8 @@ static void netduinoplus2_init(MachineState *machine)
 
     /* Timer 2 to 5 */
     for (i = 0; i < 4; i++) {
-        sysbus_create_simple("stm32f405-timer", tim2_5_addr[i],
-                             pic[tim2_5_irq[i]]);
+        sysbus_create_simple("stm32f405-timer", timer_addr[i],
+                             pic[timer_irq[i]]);
     }
 
     /* Attach GPIO devices */
