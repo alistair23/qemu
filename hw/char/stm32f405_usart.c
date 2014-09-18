@@ -118,7 +118,7 @@ static uint64_t stm32f405_usart_read(void *opaque, hwaddr addr,
 }
 
 static void stm32f405_usart_write(void *opaque, hwaddr addr,
-                       uint64_t val64, unsigned int size)
+                                  uint64_t val64, unsigned int size)
 {
     STM32f405UsartState *s = opaque;
     uint32_t value = val64;
