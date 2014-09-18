@@ -153,7 +153,7 @@ static void stm32f405_spi_init(Object *obj)
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
     memory_region_init_io(&s->mmio, obj, &stm32f405_spi_ops, s,
-                          TYPE_STM32F405_SPI, 0x2000);
+                          TYPE_STM32F405_SPI, 0x1000);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->mmio);
 
     s->ssi = ssi_create_bus(dev, "ssi");
