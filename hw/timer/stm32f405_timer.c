@@ -52,7 +52,6 @@ static void stm32f405_timer_interrupt(void *opaque)
         (s->tim_ccmr1 & TIM_CCMR1_OC2PE)) {
         /* PWM 2 - Mode 1 */
         // This might need to be calculated better
-        fprintf(stderr, "Values: %d and %d\n", s->tim_ccr2, s->tim_psc);
         DB_PRINT("Duty Cycle: %d%%\n", (uint) s->tim_ccr2 / (100 * (s->tim_psc + 1)));
     }
 
