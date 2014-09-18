@@ -38,6 +38,130 @@
 #define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
 #endif
 
+#if (EXTERNAL_TCP_ACCESS == 1)
+/* TCP External Access to GPIO
+ * This is based on the work by Biff Eros
+ * https://sites.google.com/site/bifferboard/Home/howto/qemu
+ */
+static int tcp_connection_open(gpio_tcp_connection* c)
+{
+    struct sockaddr_in remote;
+
+    if ((c->socket = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+        fprintf(stderr, "%s: Socket creation failed\n", __func__);
+        return -1;
+    }
+
+    remote.sin_family = AF_INET;
+    remote.sin_port = htons(PANEL_PORT);
+    remote.sin_addr.s_addr = inet_addr("127.0.0.1");
+    if (connect(c->socket, (struct sockaddr *)&remote, sizeof(remote)) == -1) {
+        fprintf(stderr, "%s: Connection creation failed\n", __func__);
+        close(c->socket);
+        c->socket = -1;
+        return -1;
+    }
+
+    FD_ZERO(&c->fds);
+
+    /* Set our connected socket */
+    FD_SET(c->socket, &c->fds);
+
+    DB_PRINT("Connection successful\n");
+    return 0;
+}
+
+static void tcp_connection_command(gpio_tcp_connection* c, const char* command)
+{
+    if (send(c->socket, command, strlen(command), 0) == -1) {
+        fprintf(stderr, "%s: Sending failed\n", __func__);
+        exit(1);
+    }
+}
+
+
+static int tcp_connection_getpins(gpio_tcp_connection* c,
+                                  const char* command, uint32_t* reg)
+{
+    char str[100];
+    fd_set rfds, efds;
+    int t, i;
+    /* Wait for a response from peripheral, assume it arrives all together
+     * (likely since it's only a few bytes long)
+     */
+
+    rfds = c->fds;
+    efds = c->fds;
+
+    if (select(c->socket + 1, &rfds, NULL, &efds, NULL) == -1) {
+        fprintf(stderr, "%s: Select failed\n", __func__);
+        return 1;
+    }
+
+    if (FD_ISSET(c->socket, &rfds)) {
+        /* Receive Data */
+        if ((t = recv(c->socket, str, sizeof(str)-1, 0)) > 0) {
+            str[t] = '\0';
+            if (strncmp(str, command, strlen(command)) == 0) {
+                for (i = 0; i < strlen(str); i++) {
+                    if (str[i] == '1') {
+                        *reg |= (1 << i);
+                    }
+                }
+            } else {
+                DB_PRINT("Invalid data recieved\n");
+            }
+        } else {
+            if (t < 0) {
+                perror("recv");
+            }
+            else {
+                DB_PRINT("Connection closed\n");
+            }
+            exit(1);
+        }
+    }
+
+    if (FD_ISSET(c->socket, &efds)) {
+        DB_PRINT("Connection closed\n");
+        exit(1);
+    }
+    return 0;
+}
+
+
+static void gpio_pin_write(gpio_tcp_connection* c, char gpio_letter,
+                           hwaddr addr, uint32_t reg)
+{
+    char command[100];
+
+    sprintf(command, "GPIO W %c 0x%" HWADDR_PRIx " %x \r\n", gpio_letter,
+            addr, reg);
+    tcp_connection_command(c, command);
+}
+
+
+static uint32_t gpio_pin_read(gpio_tcp_connection* c,
+                              char gpio_letter, hwaddr addr)
+{
+    char command[100];
+    int len = 1;
+    /* Assume all values are low by default */
+    uint32_t out = 0x00000000;
+
+    sprintf(command, "GPIO R %c 0x%" HWADDR_PRIx "\r\n", gpio_letter, addr);
+    tcp_connection_command(c, command);
+
+    sprintf(command, "GPIO R %c ", gpio_letter);
+    while (len) {
+        len = tcp_connection_getpins(c, command, &out);
+    }
+
+    return out;
+}
+/* END TCP External Access to GPIO */
+#endif
+
 static const VMStateDescription vmstate_stm32f405_gpio = {
     .name = "stm32f405_gpio",
     .version_id = 1,
@@ -86,7 +210,7 @@ static void stm32f405_gpio_reset(DeviceState *dev)
 }
 
 static uint64_t stm32f405_gpio_read(void *opaque, hwaddr offset,
-                           unsigned size)
+                                    unsigned size)
 {
     Stm32f405GpioState *s = (Stm32f405GpioState *)opaque;
 
@@ -103,6 +227,9 @@ static uint64_t stm32f405_gpio_read(void *opaque, hwaddr offset,
         return s->gpio_pupdr;
     case GPIO_IDR:
         /* This register changes based on the external GPIO pins */
+        #if (EXTERNAL_TCP_ACCESS == 1)
+        s->gpio_idr = gpio_pin_read(&s->tcp_info, s->gpio_letter, offset);
+        #endif
         return s->gpio_idr & s->gpio_direction;
     case GPIO_ODR:
         return s->gpio_odr;
@@ -171,7 +298,10 @@ static void stm32f405_gpio_write(void *opaque, hwaddr offset,
                       s->gpio_letter, (int)offset);
         return;
     case GPIO_ODR:
-        s->gpio_odr = ((uint32_t) value & (s->gpio_direction ^ 0xFFFF));
+        #if (EXTERNAL_TCP_ACCESS == 1)
+        gpio_pin_write(&s->tcp_info, s->gpio_letter, offset, value);
+        #endif
+        s->gpio_odr = ((uint32_t) value & (~s->gpio_direction));
         return;
     case GPIO_BSRR_HIGH:
         /* Reset the output value */
@@ -223,6 +353,15 @@ static void stm32f405_gpio_initfn(Object *obj)
 
     qdev_init_gpio_in(DEVICE(obj), stm32f405_gpio_set_irq, 15);
     qdev_init_gpio_out(DEVICE(obj), s->gpio_out, 15);
+
+    #if (EXTERNAL_TCP_ACCESS == 1)
+    /* TCP External Access to GPIO
+     * This is based on the work by Biff Eros
+     * https://sites.google.com/site/bifferboard/Home/howto/qemu
+     */
+    tcp_connection_open(&s->tcp_info);
+    /* END TCP External Access to GPIO */
+    #endif
 }
 
 static void stm32f405_gpio_class_init(ObjectClass *klass, void *data)

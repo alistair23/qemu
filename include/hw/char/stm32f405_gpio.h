@@ -24,6 +24,21 @@
 
 #include "hw/sysbus.h"
 
+/* TCP External Access to GPIO
+ * This is based on the work by Biff Eros
+ * https://sites.google.com/site/bifferboard/Home/howto/qemu
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <memory.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+/* END TCP External Access to GPIO */
+
 #define GPIO_MODER     0x00
 #define GPIO_OTYPER    0x04
 #define GPIO_OSPEEDR   0x08
@@ -44,6 +59,23 @@
 #define TYPE_STM32F405_GPIO "stm32f405-gpio"
 #define STM32F405_GPIO(obj) OBJECT_CHECK(Stm32f405GpioState, (obj), \
                            TYPE_STM32F405_GPIO)
+
+#define EXTERNAL_TCP_ACCESS 0
+
+#if (EXTERNAL_TCP_ACCESS == 1)
+/* TCP External Access to GPIO
+ * This is based on the work by Biff Eros
+ * https://sites.google.com/site/bifferboard/Home/howto/qemu
+ */
+#define GPIO_PINS 15
+#define PANEL_PORT 4321
+
+typedef struct gpio_tcp_connection {
+    int socket;
+    fd_set fds;
+} gpio_tcp_connection;
+/* END TCP External Access to GPIO */
+#endif
 
 typedef struct Stm32f405GpioState {
     SysBusDevice parent_obj;
@@ -71,4 +103,13 @@ typedef struct Stm32f405GpioState {
 
     qemu_irq gpio_out[15];
     const unsigned char *id;
+
+    #if (EXTERNAL_TCP_ACCESS == 1)
+    /* TCP External Access to GPIO
+     * This is based on the work by Biff Eros
+     * https://sites.google.com/site/bifferboard/Home/howto/qemu
+     */
+     gpio_tcp_connection tcp_info;
+     /* END TCP External Access to GPIO */
+     #endif
 } Stm32f405GpioState;
