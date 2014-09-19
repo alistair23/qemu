@@ -36,6 +36,8 @@
 
 #define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
 
+static void stm32f405_timer_set_alarm(STM32f405TimerState *s);
+
 static void stm32f405_timer_interrupt(void *opaque)
 {
     STM32f405TimerState *s = opaque;
@@ -45,6 +47,7 @@ static void stm32f405_timer_interrupt(void *opaque)
     if (s->tim_dier & TIM_DIER_UIE && s->tim_cr1 & TIM_CR1_CEN) {
         s->tim_sr |= 1;
         qemu_irq_pulse(s->irq);
+        stm32f405_timer_set_alarm(s);
     }
 
     if (s->tim_ccmr1 & (TIM_CCMR1_OC2M2 + TIM_CCMR1_OC2M1) &&
@@ -62,10 +65,10 @@ static void stm32f405_timer_set_alarm(STM32f405TimerState *s)
     uint32_t ticks;
     int64_t now;
 
-    DB_PRINT("Alarm raised in: %s at 0x%x\n", __func__, s->tim_cr1);
+    DB_PRINT("Alarm raised at: 0x%x\n", s->tim_cr1);
 
     now = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
-    ticks = s->tim_arr - (s->tick_offset + (now / get_ticks_per_sec())) *
+    ticks = s->tim_arr - (s->tick_offset + (now * get_ticks_per_sec())) *
             (s->tim_psc + 1);
 
     DB_PRINT("Alarm set in %d ticks\n", ticks);
@@ -75,7 +78,7 @@ static void stm32f405_timer_set_alarm(STM32f405TimerState *s)
         stm32f405_timer_interrupt(s);
     } else {
         timer_mod(s->timer, (now + (int64_t) ticks));
-        DB_PRINT("Wait Time: %u\n", (uint32_t) (now + ticks));
+        DB_PRINT("Wait Time: %" PRId64 "\n", now + (int64_t) ticks);
     }
 }
 
@@ -154,7 +157,7 @@ static uint64_t stm32f405_timer_read(void *opaque, hwaddr offset,
         return s->tim_or;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "STM32F405_timer_write: Bad offset %x\n", (int) offset);
+                      "STM32F405_timer_write: Bad offset 0x%"HWADDR_PRIx"\n", offset);
     }
 
     return 0;
@@ -182,8 +185,8 @@ static void stm32f405_timer_write(void *opaque, hwaddr offset,
         s->tim_dier = value;
         return;
     case TIM_SR:
+        /* This is set by hardware and cleared by software */
         s->tim_sr &= value;
-        stm32f405_timer_set_alarm(s);
         return;
     case TIM_EGR:
         s->tim_egr = value;
@@ -241,7 +244,7 @@ register. TIMx_CCR1 preload value is loaded in the active register at each updat
         return;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "STM32F405_timer_write: Bad offset %x\n", (int) offset);
+                      "STM32F405_timer_write: Bad offset 0x%"HWADDR_PRIx"\n", offset);
     }
 }
 
@@ -263,46 +266,15 @@ static void stm32f405_timer_init(Object *obj)
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->iomem);
 
     qemu_get_timedate(&tm, 0);
-    s->tick_offset = mktimegm(&tm) -
-        qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) / get_ticks_per_sec();
+    s->tick_offset = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) / get_ticks_per_sec();
 
     s->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, stm32f405_timer_interrupt, s);
 }
-
-static const VMStateDescription vmstate_stm32f405_timer = {
-    .name = "stm32f405_timer",
-    .version_id = 1,
-    .minimum_version_id = 1,
-    .fields = (VMStateField[]) {
-        VMSTATE_UINT32(tick_offset_vmstate, STM32f405TimerState),
-        VMSTATE_UINT32(tim_cr1, STM32f405TimerState),
-        VMSTATE_UINT32(tim_cr2, STM32f405TimerState),
-        VMSTATE_UINT32(tim_smcr, STM32f405TimerState),
-        VMSTATE_UINT32(tim_dier, STM32f405TimerState),
-        VMSTATE_UINT32(tim_sr, STM32f405TimerState),
-        VMSTATE_UINT32(tim_egr, STM32f405TimerState),
-        VMSTATE_UINT32(tim_ccmr1, STM32f405TimerState),
-        VMSTATE_UINT32(tim_ccmr1, STM32f405TimerState),
-        VMSTATE_UINT32(tim_ccer, STM32f405TimerState),
-        VMSTATE_UINT32(tim_cnt, STM32f405TimerState),
-        VMSTATE_UINT32(tim_psc, STM32f405TimerState),
-        VMSTATE_UINT32(tim_arr, STM32f405TimerState),
-        VMSTATE_UINT32(tim_ccr1, STM32f405TimerState),
-        VMSTATE_UINT32(tim_ccr2, STM32f405TimerState),
-        VMSTATE_UINT32(tim_ccr3, STM32f405TimerState),
-        VMSTATE_UINT32(tim_ccr4, STM32f405TimerState),
-        VMSTATE_UINT32(tim_dcr, STM32f405TimerState),
-        VMSTATE_UINT32(tim_dmar, STM32f405TimerState),
-        VMSTATE_UINT32(tim_or, STM32f405TimerState),
-        VMSTATE_END_OF_LIST()
-    }
-};
 
 static void stm32f405_timer_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
 
-    dc->vmsd = &vmstate_stm32f405_timer;
     dc->reset = stm32f405_timer_reset;
 }
 
