@@ -40,8 +40,7 @@ static int stm32f405_usart_can_receive(void *opaque)
 {
     STM32f405UsartState *s = opaque;
 
-    if (s->usart_cr1 & USART_CR1_UE && s->usart_cr1 & USART_CR1_RE &&
-        !(s->usart_sr & USART_SR_RXNE)) {
+    if (!(s->usart_sr & USART_SR_RXNE)) {
         return 1;
     }
 
@@ -53,6 +52,12 @@ static void stm32f405_usart_receive(void *opaque, const uint8_t *buf, int size)
     STM32f405UsartState *s = opaque;
 
     s->usart_dr = *buf;
+
+    if (!(s->usart_cr1 & USART_CR1_UE && s->usart_cr1 & USART_CR1_RE)) {
+        /* USART not enabled - drop the chars */
+        DB_PRINT("Dropping the chars\n");
+        return;
+    }
 
     s->usart_sr |= USART_SR_RXNE;
 
@@ -67,7 +72,7 @@ static void stm32f405_usart_reset(DeviceState *dev)
 {
     STM32f405UsartState *s = STM32F405_USART(dev);
 
-    s->usart_sr = 0x00C00000;
+    s->usart_sr = USART_SR_RESET;
     s->usart_dr = 0x00000000;
     s->usart_brr = 0x00000000;
     s->usart_cr1 = 0x00000000;
@@ -93,7 +98,7 @@ static uint64_t stm32f405_usart_read(void *opaque, hwaddr addr,
         }
         return retvalue;
     case USART_DR:
-        DB_PRINT("Value: 0x%x, %c\n", s->usart_dr, (char) s->usart_dr);
+        DB_PRINT("Value: 0x%" PRIx32 ", %c\n", s->usart_dr, (char) s->usart_dr);
         s->usart_sr |= USART_SR_TXE;
         s->usart_sr &= ~USART_SR_RXNE;
         return s->usart_dr & 0x3FF;
@@ -124,7 +129,7 @@ static void stm32f405_usart_write(void *opaque, hwaddr addr,
     uint32_t value = val64;
     unsigned char ch;
 
-    DB_PRINT("Write 0x%x, 0x%"HWADDR_PRIx"\n", value, addr);
+    DB_PRINT("Write 0x%" PRIx32 ", 0x%"HWADDR_PRIx"\n", value, addr);
 
     switch (addr) {
     case USART_SR:

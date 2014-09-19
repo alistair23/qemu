@@ -34,6 +34,8 @@
 #define USART_CR3  0x14
 #define USART_GTPR 0x18
 
+#define USART_SR_RESET 0x00C00000
+
 #define USART_SR_TXE  (1 << 7)
 #define USART_SR_TC   (1 << 6)
 #define USART_SR_RXNE (1 << 5)
