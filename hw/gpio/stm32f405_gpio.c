@@ -108,6 +108,7 @@ static int tcp_connection_getpins(gpio_tcp_connection* c,
                         *reg |= (1 << i);
                     }
                 }
+                *reg = *reg >> 16;
             } else {
                 DB_PRINT("Invalid data recieved\n");
             }
@@ -135,7 +136,7 @@ static void gpio_pin_write(gpio_tcp_connection* c, char gpio_letter,
 {
     char command[100];
 
-    sprintf(command, "GPIO W %c 0x%" HWADDR_PRIx " %x \r\n", gpio_letter,
+    sprintf(command, "GPIO W %c %" HWADDR_PRId " %u\r\n", gpio_letter,
             addr, reg);
     tcp_connection_command(c, command);
 }
@@ -156,6 +157,8 @@ static uint32_t gpio_pin_read(gpio_tcp_connection* c,
     while (len) {
         len = tcp_connection_getpins(c, command, &out);
     }
+
+    fprintf(stderr, "Output: 0x%x\n", out);
 
     return out;
 }
