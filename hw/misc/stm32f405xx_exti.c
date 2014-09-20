@@ -24,7 +24,6 @@
 
 #include "hw/sysbus.h"
 #include "hw/hw.h"
-#include "hw/misc/stm32f405_syscfg.h"
 
 #ifndef ST_EXTI_ERR_DEBUG
 #define ST_EXTI_ERR_DEBUG 0
@@ -45,8 +44,7 @@
 #define EXTI_SWIER 0x10
 #define EXTI_PR    0x14
 
-#define NUM_GPIO_EVENT_IN_LINES (15 * 9)
-
+#define NUM_GPIO_EVENT_IN_LINES 15
 #define NUM_INTERRUPT_OUT_LINES 15
 
 #define TYPE_STM32F405_EXTI "stm32f405-exti"
@@ -83,70 +81,11 @@ static void stm32f405_exti_reset(DeviceState *dev)
 static void stm32f405_exti_set_irq(void * opaque, int irq, int level)
 {
     STM32f405ExtiState *s = opaque;
-    DeviceState *syscfg = NULL;
 
-    /* I don't like this at all */
+    DB_PRINT("Set EXTI: %d to %d\n", irq, level);
+    fprintf(stderr, "Set EXTI: %d to %d\n", irq, level);
 
-    syscfg = qdev_find_recursive(sysbus_get_default(),
-                                 "stm32f405-syscfg");
-
-    STM32f405SyscfgState *s_slave = STM32F405_SYSCFG(syscfg);
-
-    if (s_slave->syscfg_exticr1 & 0xFF) {
-        qemu_irq_pulse(s->irq[0]);
-        DB_PRINT("Pulse EXTI: 0\n");
-    } else if (s_slave->syscfg_exticr1 & 0xFF00) {
-        qemu_irq_pulse(s->irq[1]);
-        DB_PRINT("Pulse EXTI: 1\n");
-    } else if (s_slave->syscfg_exticr1 & 0xFF0000) {
-        qemu_irq_pulse(s->irq[2]);
-        DB_PRINT("Pulse EXTI: 2\n");
-    } else if (s_slave->syscfg_exticr1 & 0xFF000000) {
-        qemu_irq_pulse(s->irq[3]);
-        DB_PRINT("Pulse EXTI: 3\n");
-    }
-
-    if (s_slave->syscfg_exticr2 & 0xFF) {
-        qemu_irq_pulse(s->irq[4]);
-        DB_PRINT("Pulse EXTI: 4\n");
-    } else if (s_slave->syscfg_exticr2 & 0xFF00) {
-        qemu_irq_pulse(s->irq[5]);
-        DB_PRINT("Pulse EXTI: 5\n");
-    } else if (s_slave->syscfg_exticr2 & 0xFF0000) {
-        qemu_irq_pulse(s->irq[6]);
-        DB_PRINT("Pulse EXTI: 6\n");
-    } else if (s_slave->syscfg_exticr2 & 0xFF000000) {
-        qemu_irq_pulse(s->irq[7]);
-        DB_PRINT("Pulse EXTI: 7\n");
-    }
-
-    if (s_slave->syscfg_exticr3 & 0xFF) {
-        qemu_irq_pulse(s->irq[8]);
-        DB_PRINT("Pulse EXTI: 8\n");
-    } else if (s_slave->syscfg_exticr3 & 0xFF00) {
-        qemu_irq_pulse(s->irq[9]);
-        DB_PRINT("Pulse EXTI: 9\n");
-    } else if (s_slave->syscfg_exticr3 & 0xFF0000) {
-        qemu_irq_pulse(s->irq[10]);
-        DB_PRINT("Pulse EXTI: 10\n");
-    } else if (s_slave->syscfg_exticr3 & 0xFF000000) {
-        qemu_irq_pulse(s->irq[11]);
-        DB_PRINT("Pulse EXTI: 11\n");
-    }
-
-    if (s_slave->syscfg_exticr4 & 0xFF) {
-        qemu_irq_pulse(s->irq[12]);
-        DB_PRINT("Pulse EXTI: 12\n");
-    } else if (s_slave->syscfg_exticr4 & 0xFF00) {
-        qemu_irq_pulse(s->irq[13]);
-        DB_PRINT("Pulse EXTI: 13\n");
-    } else if (s_slave->syscfg_exticr4 & 0xFF0000) {
-        qemu_irq_pulse(s->irq[14]);
-        DB_PRINT("Pulse EXTI: 14\n");
-    } else if (s_slave->syscfg_exticr4 & 0xFF000000) {
-        qemu_irq_pulse(s->irq[15]);
-        DB_PRINT("Pulse EXTI: 15\n");
-    }
+    qemu_set_irq(s->irq[irq], level);
 }
 
 static uint64_t stm32f405_exti_read(void *opaque, hwaddr addr,

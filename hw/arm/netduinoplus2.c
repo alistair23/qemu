@@ -93,6 +93,7 @@ static void netduinoplus2_init(MachineState *machine)
     CPUARMState *env;
     DeviceState *nvic;
     DeviceState *gpio[11];
+    DeviceState *syscfg;
     DeviceState *dev;
     DeviceState *nrf24l01plus;
     SysBusDevice *busdev;
@@ -141,14 +142,6 @@ static void netduinoplus2_init(MachineState *machine)
         pic[i] = qdev_get_gpio_in(nvic, i);
     }
 
-    /* System configuration controller */
-    dev = qdev_create(NULL, "stm32f405-syscfg");
-    dev->id = "stm32f405-syscfg";
-    qdev_init_nofail(dev);
-    busdev = SYS_BUS_DEVICE(dev);
-    sysbus_mmio_map(busdev, 0, 0x40013800);
-    sysbus_connect_irq(busdev, 0, pic[71]);
-
     /* Attach UART (uses USART registers) and USART controllers */
     for (i = 0; i < 7; i++) {
         sysbus_create_simple("stm32f405-usart", usart_addr[i],
@@ -171,6 +164,19 @@ static void netduinoplus2_init(MachineState *machine)
         for (j = 0; j < 15; j++) {
             gpio_in[i][j] = qdev_get_gpio_in(gpio[i], j);
             qemu_set_irq(gpio_in[i][j], 0);
+        }
+    }
+
+    /* System configuration controller */
+    syscfg = qdev_create(NULL, "stm32f405-syscfg");
+    qdev_init_nofail(syscfg);
+    busdev = SYS_BUS_DEVICE(syscfg);
+    sysbus_mmio_map(busdev, 0, 0x40013800);
+    sysbus_connect_irq(busdev, 0, pic[71]);
+    for (i = 0; i < 9; ++i) {
+        for (j = 0; j < 15; j++) {
+            qdev_connect_gpio_out(gpio[i], j, qdev_get_gpio_in(syscfg,
+                                  (i * 15) + j));
         }
     }
 
@@ -202,10 +208,8 @@ static void netduinoplus2_init(MachineState *machine)
     for (i = 0; i < 15; ++i) {
         sysbus_connect_irq(busdev, i, pic[exti_irq[i]]);
     }
-    for (i = 0; i < 9; ++i) {
-        for (j = 0; j < 15; j++) {
-            qdev_connect_gpio_out(gpio[i], j, qdev_get_gpio_in(dev, (i * 15) + j));
-        }
+    for (j = 0; j < 15; j++) {
+        qdev_connect_gpio_out(syscfg, j, qdev_get_gpio_in(dev, j));
     }
 
     /* Load the kernel */

@@ -49,6 +49,70 @@ static void stm32f405_syscfg_reset(DeviceState *dev)
     s->syscfg_cmpcr = 0x00000000;
 }
 
+static void stm32f405_syscfg_set_irq(void * opaque, int irq, int level)
+{
+    STM32f405SyscfgState *s = opaque;
+
+    DB_PRINT("Interupt: GPIO: %d, Line: %d; Level: %d\n", irq / 15,
+             irq % 15, level);
+
+    if (s->syscfg_exticr1 & 0xFF) {
+        qemu_irq_pulse(s->gpio_out[0]);
+        DB_PRINT("Pulse EXTI: 0\n");
+    } else if (s->syscfg_exticr1 & 0xFF00) {
+        qemu_irq_pulse(s->gpio_out[1]);
+        DB_PRINT("Pulse EXTI: 1\n");
+    } else if (s->syscfg_exticr1 & 0xFF0000) {
+        qemu_irq_pulse(s->gpio_out[2]);
+        DB_PRINT("Pulse EXTI: 2\n");
+    } else if (s->syscfg_exticr1 & 0xFF000000) {
+        qemu_irq_pulse(s->gpio_out[3]);
+        DB_PRINT("Pulse EXTI: 3\n");
+    }
+
+    if (s->syscfg_exticr2 & 0xFF) {
+        qemu_irq_pulse(s->gpio_out[4]);
+        DB_PRINT("Pulse EXTI: 4\n");
+    } else if (s->syscfg_exticr2 & 0xFF00) {
+        qemu_irq_pulse(s->gpio_out[5]);
+        DB_PRINT("Pulse EXTI: 5\n");
+    } else if (s->syscfg_exticr2 & 0xFF0000) {
+        qemu_irq_pulse(s->gpio_out[6]);
+        DB_PRINT("Pulse EXTI: 6\n");
+    } else if (s->syscfg_exticr2 & 0xFF000000) {
+        qemu_irq_pulse(s->gpio_out[7]);
+        DB_PRINT("Pulse EXTI: 7\n");
+    }
+
+    if (s->syscfg_exticr3 & 0xFF) {
+        qemu_irq_pulse(s->gpio_out[8]);
+        DB_PRINT("Pulse EXTI: 8\n");
+    } else if (s->syscfg_exticr3 & 0xFF00) {
+        qemu_irq_pulse(s->gpio_out[9]);
+        DB_PRINT("Pulse EXTI: 9\n");
+    } else if (s->syscfg_exticr3 & 0xFF0000) {
+        qemu_irq_pulse(s->gpio_out[10]);
+        DB_PRINT("Pulse EXTI: 10\n");
+    } else if (s->syscfg_exticr3 & 0xFF000000) {
+        qemu_irq_pulse(s->gpio_out[11]);
+        DB_PRINT("Pulse EXTI: 11\n");
+    }
+
+    if (s->syscfg_exticr4 & 0xFF) {
+        qemu_irq_pulse(s->gpio_out[12]);
+        DB_PRINT("Pulse EXTI: 12\n");
+    } else if (s->syscfg_exticr4 & 0xFF00) {
+        qemu_irq_pulse(s->gpio_out[13]);
+        DB_PRINT("Pulse EXTI: 13\n");
+    } else if (s->syscfg_exticr4 & 0xFF0000) {
+        qemu_irq_pulse(s->gpio_out[14]);
+        DB_PRINT("Pulse EXTI: 14\n");
+    } else if (s->syscfg_exticr4 & 0xFF000000) {
+        qemu_irq_pulse(s->gpio_out[15]);
+        DB_PRINT("Pulse EXTI: 15\n");
+    }
+}
+
 static uint64_t stm32f405_syscfg_read(void *opaque, hwaddr addr,
                                      unsigned int size)
 {
@@ -135,6 +199,9 @@ static void stm32f405_syscfg_init(Object *obj)
     memory_region_init_io(&s->mmio, obj, &stm32f405_syscfg_ops, s,
                           TYPE_STM32F405_SYSCFG, 0x2000);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->mmio);
+
+    qdev_init_gpio_in(DEVICE(obj), stm32f405_syscfg_set_irq, 15 * 9);
+    qdev_init_gpio_out(DEVICE(obj), s->gpio_out, 15);
 }
 
 static void stm32f405_syscfg_class_init(ObjectClass *klass, void *data)
