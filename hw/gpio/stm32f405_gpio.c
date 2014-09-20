@@ -38,6 +38,18 @@
 #define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
 #endif
 
+static void stm32f405_gpio_set_irq(void * opaque, int irq, int level)
+{
+    Stm32f405GpioState *s = (Stm32f405GpioState *)opaque;
+
+    DB_PRINT("Line: %d Level: %d\n", irq, !!((!!level << irq) & (0xFFFF ^ s->gpio_direction)));
+    fprintf(stderr, "Line: %d Level: %d\n", irq, !!((!!level << irq) & (0xFFFF ^ s->gpio_direction)));
+
+    s->gpio_odr |= level << irq;
+
+    qemu_set_irq(s->gpio_out[irq], !!((!!level << irq) & (0xFFFF ^ s->gpio_direction)));
+}
+
 #if (EXTERNAL_TCP_ACCESS == 1)
 /* TCP External Access to GPIO
  * This is based on the work by Biff Eros
@@ -238,17 +250,6 @@ static uint64_t stm32f405_gpio_read(void *opaque, hwaddr offset,
         return s->gpio_afrh;
     }
     return 0;
-}
-
-static void stm32f405_gpio_set_irq(void * opaque, int irq, int level)
-{
-    Stm32f405GpioState *s = (Stm32f405GpioState *)opaque;
-
-    DB_PRINT("Line: %d Level: %d\n", irq, level);
-
-    s->gpio_odr |= level << irq;
-
-    qemu_set_irq(s->gpio_out[irq], !!((level << irq) & (0xFFFF ^ s->gpio_direction)));
 }
 
 static void stm32f405_gpio_write(void *opaque, hwaddr offset,

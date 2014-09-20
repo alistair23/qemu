@@ -105,7 +105,6 @@ static void netduinoplus2_init(MachineState *machine)
     uint64_t lowaddr;
     int i, j;
     int big_endian = 0;
-    char gpio_name[19];
 
     /* The Netduinio Plus 2 uses a Cortex-M4, while QEMU currently supports
      * the Cortex-M3, so that is being used instead
@@ -165,8 +164,6 @@ static void netduinoplus2_init(MachineState *machine)
     /* Attach GPIO devices */
     for (i = 0; i < 11; i++) {
         gpio[i] = qdev_create(NULL, "stm32f405-gpio");
-        sprintf(gpio_name, "stm32f405-gpio-%c", gpio_letters[i]);
-        dev->id = gpio_name;
         qdev_prop_set_uint8(gpio[i], "gpio-letter", gpio_letters[i]);
         qdev_init_nofail(gpio[i]);
         busdev = SYS_BUS_DEVICE(gpio[i]);
