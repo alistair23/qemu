@@ -31,7 +31,7 @@
 #ifndef DB_PRINT_L
 #define DB_PRINT_L(lvl, fmt, args...) do { \
     if (ST_GPIO_ERR_DEBUG >= lvl) { \
-        fprintf(stderr, "stm32f405_gpio: %s:" fmt, __func__, ## args); \
+        qemu_log("%s: " fmt, __func__, ## args); \
     } \
 } while (0);
 

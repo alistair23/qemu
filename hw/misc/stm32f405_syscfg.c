@@ -30,7 +30,7 @@
 
 #define DB_PRINT_L(lvl, fmt, args...) do { \
     if (STM_SYSCFG_ERR_DEBUG >= lvl) { \
-        qemu_log("stm32f405_syscfg: %s:" fmt, __func__, ## args); \
+        qemu_log("%s: " fmt, __func__, ## args); \
     } \
 } while (0);
 

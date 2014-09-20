@@ -30,7 +30,7 @@
 
 #define DB_PRINT_L(lvl, fmt, args...) do { \
     if (NRF24L01PLUS_ERR_DEBUG >= lvl) { \
-        qemu_log("NRF24L01+: %s:" fmt, __func__, ## args); \
+        qemu_log("%s: " fmt, __func__, ## args); \
     } \
 } while (0);
 

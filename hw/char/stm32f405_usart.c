@@ -30,7 +30,7 @@
 
 #define DB_PRINT_L(lvl, fmt, args...) do { \
     if (STM_USART_ERR_DEBUG >= lvl) { \
-        qemu_log("stm32f405_usart: %s:" fmt, __func__, ## args); \
+        qemu_log("%s: " fmt, __func__, ## args); \
     } \
 } while (0);
 

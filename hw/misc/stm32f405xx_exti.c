@@ -31,7 +31,7 @@
 
 #define DB_PRINT_L(lvl, fmt, args...) do { \
     if (ST_EXTI_ERR_DEBUG >= lvl) { \
-        fprintf(stderr, "stm32f405_exti: %s:" fmt, __func__, ## args); \
+        qemu_log("%s: " fmt, __func__, ## args); \
     } \
 } while (0);
 
