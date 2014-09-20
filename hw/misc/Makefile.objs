@@ -39,7 +39,7 @@ obj-$(CONFIG_OMAP) += omap_tap.o
 obj-$(CONFIG_SLAVIO) += slavio_misc.o
 obj-$(CONFIG_ZYNQ) += zynq_slcr.o
 obj-$(CONFIG_STM32F405_SYSCFG) += stm32f405_syscfg.o
-obj-$(CONFIG_STM32F405_ADC) += stm32f405xx_adc.o
-obj-$(CONFIG_STM32F405_EXTI) += stm32f405xx_exti.o
+obj-$(CONFIG_STM32F405_ADC) += stm32f405_adc.o
+obj-$(CONFIG_STM32F405_EXTI) += stm32f405_exti.o
 
 obj-$(CONFIG_PVPANIC) += pvpanic.o
