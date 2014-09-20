@@ -64,6 +64,7 @@ class Channel(asynchat.async_chat):
     self.set_terminator("\r\n")
     self.header = None
     self.data = ""
+    self.temp_data = 00000000000000000000000000000000
     self.shutdown = 0
     self.notify = []
     self.server = server
@@ -83,13 +84,19 @@ class Channel(asynchat.async_chat):
       if m:
         reg, val = m.groups()
         reg = int(reg)
-	print "Register Address: ", reg, "Value: ", val
+	print "Write :: Address: ", reg, "Value: ", val
         if reg < PIN_COUNT:
           self.server.clients[self.socket.fileno()].SetPin(int(reg), val)
           self.server.Resolve()
     elif self.data.startswith("GPIO R "):
-      print "Read ", repr(self.data)
-      self.NotifyValues(self.server.Resolve())
+      print "Read :: ", repr(self.data)
+      #self.NotifyValues(self.server.Resolve())
+
+      # Invert bits - Used for testing
+      self.temp_data = self.temp_data ^ 0xFFFFFFFF
+      print "Temp Out: ", self.temp_data
+      self.NotifyValues(str(bin(self.temp_data)))
+
     elif self.data.startswith("NOTIFY "):
       m = self.nmatch.match(self.data)
       if m:
@@ -135,9 +142,7 @@ class TerminalBlock(asyncore.dispatcher):
     self.PinArbitration = {
       #   :  10PX
       "1" : "1E11",
-      "0" : "E000",
-      "P" : "10PP",
-      "X" : "10PX"
+      "0" : "E000"
     }
     self.LastResolve = self.GetDefaultPins()
 
