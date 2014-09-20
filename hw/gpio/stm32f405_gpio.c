@@ -43,7 +43,6 @@ static void stm32f405_gpio_set_irq(void * opaque, int irq, int level)
     Stm32f405GpioState *s = (Stm32f405GpioState *)opaque;
 
     DB_PRINT("Line: %d Level: %d\n", irq, !!((!!level << irq) & (0xFFFF ^ s->gpio_direction)));
-    fprintf(stderr, "Line: %d Level: %d\n", irq, !!((!!level << irq) & (0xFFFF ^ s->gpio_direction)));
 
     s->gpio_odr |= level << irq;
 

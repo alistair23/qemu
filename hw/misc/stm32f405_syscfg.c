@@ -25,7 +25,7 @@
 #include "hw/misc/stm32f405_syscfg.h"
 
 #ifndef STM_SYSCFG_ERR_DEBUG
-#define STM_SYSCFG_ERR_DEBUG 1
+#define STM_SYSCFG_ERR_DEBUG 0
 #endif
 
 #define DB_PRINT_L(lvl, fmt, args...) do { \
