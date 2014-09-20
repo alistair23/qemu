@@ -102,6 +102,7 @@ static int tcp_connection_getpins(gpio_tcp_connection* c,
         /* Receive Data */
         if ((t = recv(c->socket, str, sizeof(str)-1, 0)) > 0) {
             str[t] = '\0';
+            DB_PRINT("Input String: %s\n", str);
             if (strncmp(str, command, strlen(command)) == 0) {
                 for (i = 0; i < strlen(str); i++) {
                     if (str[i] == '1') {
@@ -109,6 +110,7 @@ static int tcp_connection_getpins(gpio_tcp_connection* c,
                     }
                 }
                 *reg = *reg >> 16;
+                DB_PRINT("Reg is: 0x%x\n", *reg);
             } else {
                 DB_PRINT("Invalid data recieved\n");
             }
@@ -142,13 +144,15 @@ static void gpio_pin_write(gpio_tcp_connection* c, char gpio_letter,
 }
 
 
-static uint32_t gpio_pin_read(gpio_tcp_connection* c,
+static uint32_t gpio_pin_read(Stm32f405GpioState *s,
                               char gpio_letter, hwaddr addr)
 {
+    gpio_tcp_connection* c = &s->tcp_info;
     char command[100];
-    int len = 1;
+    int i, len = 1;
     /* Assume all values are low by default */
     uint32_t out = 0x00000000;
+    uint32_t changes, prev_out = 0x00000000;
 
     sprintf(command, "GPIO R %c 0x%" HWADDR_PRIx "\r\n", gpio_letter, addr);
     tcp_connection_command(c, command);
@@ -158,31 +162,17 @@ static uint32_t gpio_pin_read(gpio_tcp_connection* c,
         len = tcp_connection_getpins(c, command, &out);
     }
 
-    fprintf(stderr, "Output: 0x%x\n", out);
-
+    changes = out ^ prev_out;
+    for (i = 0; i < 16; i++) {
+        if (changes & (1 << i)) {
+            stm32f405_gpio_set_irq(s, i, out & (1 << i));
+        }
+    }
+    prev_out = out;
     return out;
 }
 /* END TCP External Access to GPIO */
 #endif
-
-static const VMStateDescription vmstate_stm32f405_gpio = {
-    .name = "stm32f405_gpio",
-    .version_id = 1,
-    .minimum_version_id = 1,
-    .fields = (VMStateField[]) {
-        VMSTATE_UINT32(gpio_moder, Stm32f405GpioState),
-        VMSTATE_UINT32(gpio_otyper, Stm32f405GpioState),
-        VMSTATE_UINT32(gpio_ospeedr, Stm32f405GpioState),
-        VMSTATE_UINT32(gpio_pupdr, Stm32f405GpioState),
-        VMSTATE_UINT32(gpio_idr, Stm32f405GpioState),
-        VMSTATE_UINT32(gpio_odr, Stm32f405GpioState),
-        VMSTATE_UINT32(gpio_bsrr, Stm32f405GpioState),
-        VMSTATE_UINT32(gpio_lckr, Stm32f405GpioState),
-        VMSTATE_UINT32(gpio_afrl, Stm32f405GpioState),
-        VMSTATE_UINT32(gpio_afrh, Stm32f405GpioState),
-        VMSTATE_END_OF_LIST()
-    }
-};
 
 static void stm32f405_gpio_reset(DeviceState *dev)
 {
@@ -231,7 +221,7 @@ static uint64_t stm32f405_gpio_read(void *opaque, hwaddr offset,
     case GPIO_IDR:
         /* This register changes based on the external GPIO pins */
         #if (EXTERNAL_TCP_ACCESS == 1)
-        s->gpio_idr = gpio_pin_read(&s->tcp_info, s->gpio_letter, offset);
+        s->gpio_idr = gpio_pin_read(s, s->gpio_letter, offset);
         #endif
         return s->gpio_idr & s->gpio_direction;
     case GPIO_ODR:
@@ -262,7 +252,7 @@ static void stm32f405_gpio_set_irq(void * opaque, int irq, int level)
 }
 
 static void stm32f405_gpio_write(void *opaque, hwaddr offset,
-                                   uint64_t value, unsigned size)
+                                 uint64_t value, unsigned size)
 {
     Stm32f405GpioState *s = (Stm32f405GpioState *)opaque;
     int i, mask;
@@ -371,7 +361,6 @@ static void stm32f405_gpio_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
 
-    dc->vmsd = &vmstate_stm32f405_gpio;
     dc->props = stm32f405_gpio_properties;
     dc->reset = stm32f405_gpio_reset;
 }
