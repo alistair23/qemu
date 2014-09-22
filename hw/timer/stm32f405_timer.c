@@ -52,10 +52,11 @@ static void stm32f405_timer_interrupt(void *opaque)
 
     if (s->tim_ccmr1 & (TIM_CCMR1_OC2M2 + TIM_CCMR1_OC2M1) &&
         !(s->tim_ccmr1 & TIM_CCMR1_OC2M0) &&
-        (s->tim_ccmr1 & TIM_CCMR1_OC2PE)) {
+        (s->tim_ccmr1 & TIM_CCMR1_OC2PE) &&
+        s->tim_ccer & TIM_CCER_CC2E) {
         /* PWM 2 - Mode 1 */
-        // This might need to be calculated better
-        DB_PRINT("Duty Cycle: %d%%\n", (uint) s->tim_ccr2 / (100 * (s->tim_psc + 1)));
+        fprintf(stderr, "%s: Duty Cycle: %d%%\n", __func__,
+                s->tim_ccr2 / (100 * (s->tim_psc + 1)));
     }
 
 }
@@ -197,18 +198,12 @@ static void stm32f405_timer_write(void *opaque, hwaddr offset,
         return;
     case TIM_CCMR1:
         s->tim_ccmr1 = value;
-                /* Output compare 2 preload enable */
-/* 1: Preload register on TIMx_CCR1 enabled. Read/Write operations access the preload
-register. TIMx_CCR1 preload value is loaded in the active register at each update event. */
         return;
     case TIM_CCMR2:
         s->tim_ccmr2 = value;
         return;
     case TIM_CCER:
         s->tim_ccer = value;
-        if (s->tim_ccer & TIM_CCER_CC2E) {
-            /* Capture/Compare 2 output enabled */
-        }
         return;
     case TIM_CNT:
         s->tim_cnt = value;
