@@ -40,6 +40,11 @@
 #define SRAM_BASE_ADDRESS 0x20000000
 #define SRAM_SIZE (192 * 1024)
 
+/* The SPI device the nRF240L01+ device is connected to
+ * Set to zero to remove it
+ */
+#define NRF24L01PLUS_SPI_NUMBER 2
+
 typedef struct ARMV7MResetArgs {
     ARMCPU *cpu;
     uint32_t reset_sp;
@@ -95,7 +100,6 @@ static void netduinoplus2_init(MachineState *machine)
     DeviceState *gpio[11];
     DeviceState *syscfg;
     DeviceState *dev;
-    DeviceState *nrf24l01plus;
     SysBusDevice *busdev;
     void *bus;
     qemu_irq gpio_in[11][16];
@@ -189,13 +193,13 @@ static void netduinoplus2_init(MachineState *machine)
     for (i = 0; i < 6; i++) {
         dev = sysbus_create_simple("stm32f405-spi", spi_addr[i],
                                    pic[spi_irq[i]]);
-        if (i == 1) {
+        if (i == (NRF24L01PLUS_SPI_NUMBER - 1)) {
             /* Connect the 2.4GHz wireless chip via SPI
              * NOTE: This is not part of the Netduino Plus 2, but is
              * an external device attached via the boards pins
              */
             bus = qdev_get_child_bus(dev, "ssi");
-            nrf24l01plus = ssi_create_slave(bus, "nrf24l01plus");
+            ssi_create_slave(bus, "nrf24l01plus");
         }
     }
 
