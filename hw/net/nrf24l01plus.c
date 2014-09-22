@@ -36,12 +36,18 @@
 
 #define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
 
-#define R_REGISTER 0b11100000
-#define W_REGISTER 0b11000000
-#define R_RX_PAYLOAD 0b10011110
-#define R_TX_PAYLOAD 0b01011111
-#define FLUSH_TX 0b00011110
-#define FLUSH_RX 0b00011101
+#define R_REGISTER 0xE0
+#define W_REGISTER 0xC0
+#define R_RX_PAYLOAD 0x9E
+#define R_TX_PAYLOAD 0x5F
+#define FLUSH_TX 0x1E
+#define FLUSH_RX 0x1D
+#define NOP 0xFF
+
+#define CONFIG_REG 0x00
+#define STATUS_REG 0x07
+
+#define STATUS_REG_RX_DR 6
 
 typedef enum {
     NRF24L01P_CMD,
@@ -57,6 +63,9 @@ typedef struct {
     SSISlave ssidev;
     nrf24l01plus_mode mode;
     uint32_t register_map;
+
+    uint32_t status_reg;
+    uint32_t config_reg;
 } nrf24l01plus_state;
 
 static uint32_t nrf24l01plus_transfer(SSISlave *dev, uint32_t val)
@@ -65,35 +74,66 @@ static uint32_t nrf24l01plus_transfer(SSISlave *dev, uint32_t val)
 
     DB_PRINT("Mode is: %d; Value is: 0x%x\n", s->mode, val);
 
-    switch (s->mode) {
-    case NRF24L01P_CMD:
+    if (val == NOP) {
+        return 0;
+    }
+
+    if (s->mode == NRF24L01P_CMD) {
         if (!(val & R_REGISTER)) {
             s->mode = NRF24L01P_READ;
             s->register_map = 0b11111 & val;
         } else if (!(val & W_REGISTER)) {
             s->mode = NRF24L01P_WRITE;
             s->register_map = 0b11111 & val;
-        } else if (!(val & R_RX_PAYLOAD)) {
+        } else if (val == R_RX_PAYLOAD) {
             s->mode = NRF24L01P_READ_RX_PAYLOAD;
-        } else if (!(val & R_TX_PAYLOAD)) {
+        } else if (val == R_TX_PAYLOAD) {
             s->mode = NRF24L01P_WRITE_TX_PAYLOAD;
-        } else if (!(val & FLUSH_TX)) {
+        } else if (val == FLUSH_TX) {
             s->mode = NRF24L01P_FLUSH_TX;
-        } else if (!(val & FLUSH_RX)) {
+        } else if (val == FLUSH_RX) {
             s->mode = NRF24L01P_FLUSH_RX;
         } else {
             qemu_log_mask(LOG_UNIMP,
-                          "NRF24L01+_Transfer: Bad command or unimplemented 0x%x\n", val);
+                          "nRF24L01+_Transfer: Bad command or unimplemented " \
+                          "0x%x\n", val);
+        }
+    }
+
+    DB_PRINT("New mode is: %d\n", s->mode);
+
+    switch (s->mode) {
+    case NRF24L01P_WRITE:
+        DB_PRINT("Writing Register: 0x%x\n", s->register_map);
+        s->mode = NRF24L01P_CMD;
+
+        switch(s->register_map) {
+        case STATUS_REG:
+            s->status_reg &= ~val;
+            break;
+        default:
+            qemu_log_mask(LOG_UNIMP,
+                          "nRF24L01+_Read: Bad address or unimplemented " \
+                          "0x%x\n", s->register_map);
         }
         break;
-    case NRF24L01P_WRITE:
-        // write to register from register_map
-        s->mode = NRF24L01P_CMD;
-        break;
     case NRF24L01P_READ:
-        // return register from register_map
+        DB_PRINT("Reading Register: 0x%x\n", s->register_map);
         s->mode = NRF24L01P_CMD;
-        return 0xFF;
+
+        switch(s->register_map) {
+        case CONFIG_REG:
+            return s->config_reg;
+        case STATUS_REG:
+            /* Let's fake that data is avalible */
+            s->status_reg |= (1 << STATUS_REG_RX_DR);
+            return s->status_reg;
+        default:
+            qemu_log_mask(LOG_UNIMP,
+                          "nRF24L01+_Read: Bad address or unimplemented " \
+                          "0x%x\n", s->register_map);
+        }
+        break;
     case NRF24L01P_READ_RX_PAYLOAD:
         // Read from internal FIFO
         s->mode = NRF24L01P_CMD;
