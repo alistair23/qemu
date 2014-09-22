@@ -33,15 +33,16 @@
 #define SPI_CR2     0x04
 #define SPI_SR      0x08
 #define SPI_DR      0x0C
-#define SPI_CPCPR   0x10
+#define SPI_CRCPR   0x10
 #define SPI_RXCRCR  0x14
 #define SPI_TXCRCR  0x18
 #define SPI_I2SCFGR 0x1C
 #define SPI_I2SPR   0x20
 
-#define SPI_CR1_MSTR (1 << 2)
 #define SPI_CR1_SPE  (1 << 6)
+#define SPI_CR1_MSTR (1 << 2)
 
+#define SPI_SR_BSY   (1 << 7)
 #define SPI_SR_TXE   (1 << 1)
 #define SPI_SR_RXNE   1
 
@@ -60,7 +61,7 @@ typedef struct {
     uint32_t spi_cr2;
     uint32_t spi_sr;
     uint32_t spi_dr;
-    uint32_t spi_cpcpr;
+    uint32_t spi_crcpr;
     uint32_t spi_rxcrcr;
     uint32_t spi_txcrcr;
     uint32_t spi_i2scfgr;

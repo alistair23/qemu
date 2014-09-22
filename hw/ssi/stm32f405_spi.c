@@ -42,9 +42,9 @@ static void stm32f405_spi_reset(DeviceState *dev)
 
     s->spi_cr1 = 0x00000000;
     s->spi_cr2 = 0x00000000;
-    s->spi_sr = 0x00000008;
+    s->spi_sr = 0x0000000A;
     s->spi_dr = 0x0000000C;
-    s->spi_cpcpr = 0x00000007;
+    s->spi_crcpr = 0x00000007;
     s->spi_rxcrcr = 0x00000000;
     s->spi_txcrcr = 0x00000000;
     s->spi_i2scfgr = 0x00000000;
@@ -53,15 +53,19 @@ static void stm32f405_spi_reset(DeviceState *dev)
 
 static void stm32f405_spi_transfer(STM32f405SpiState *s)
 {
-    DB_PRINT("Data: 0x%x\n", s->spi_dr);
+    DB_PRINT("Data to sent: 0x%x\n", s->spi_dr);
 
     s->spi_dr = ssi_transfer(s->ssi, s->spi_dr);
+    s->spi_sr |= SPI_SR_RXNE;
+
+    DB_PRINT("Data recieved: 0x%x\n", s->spi_dr);
 }
 
 static uint64_t stm32f405_spi_read(void *opaque, hwaddr addr,
                                      unsigned int size)
 {
     STM32f405SpiState *s = opaque;
+    uint32_t retval;
 
     DB_PRINT("0x%x\n", (uint) addr);
 
@@ -69,23 +73,42 @@ static uint64_t stm32f405_spi_read(void *opaque, hwaddr addr,
     case SPI_CR1:
         return s->spi_cr1;
     case SPI_CR2:
+        qemu_log_mask(LOG_UNIMP,"STM32F405_spi_read: " \
+                      "Interrupts and DMA are not implemented\n");
         return s->spi_cr2;
     case SPI_SR:
-        s->spi_sr |= SPI_SR_TXE;
-        s->spi_sr ^= SPI_SR_RXNE;
-        return s->spi_sr;
+        retval = s->spi_sr;
+        return retval;
     case SPI_DR:
+        s->spi_sr |= SPI_SR_BSY;
         stm32f405_spi_transfer(s);
+        s->spi_sr &= ~SPI_SR_RXNE;
+        s->spi_sr &= ~SPI_SR_BSY;
         return s->spi_dr;
-    case SPI_CPCPR:
-        return s->spi_cpcpr;
+    case SPI_CRCPR:
+        qemu_log_mask(LOG_UNIMP,"STM32F405_spi_read: " \
+                      "CRC is not implemented, the registers are " \
+                      "includded for compatability\n");
+        return s->spi_crcpr;
     case SPI_RXCRCR:
+        qemu_log_mask(LOG_UNIMP,"STM32F405_spi_read: " \
+                      "CRC is not implemented, the registers are " \
+                      "includded for compatability\n");
         return s->spi_rxcrcr;
     case SPI_TXCRCR:
+        qemu_log_mask(LOG_UNIMP,"STM32F405_spi_read: " \
+                      "CRC is not implemented, the registers are " \
+                      "includded for compatability\n");
         return s->spi_txcrcr;
     case SPI_I2SCFGR:
+        qemu_log_mask(LOG_UNIMP,"STM32F405_spi_read: " \
+                      "I2S is not implemented, the registers are " \
+                      "includded for compatability\n");
         return s->spi_i2scfgr;
     case SPI_I2SPR:
+        qemu_log_mask(LOG_UNIMP,"STM32F405_spi_read: " \
+                      "I2S is not implemented, the registers are " \
+                      "includded for compatability\n");
         return s->spi_i2spr;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
@@ -109,29 +132,44 @@ static void stm32f405_spi_write(void *opaque, hwaddr addr,
         s->spi_cr1 = value;
         return;
     case SPI_CR2:
+        qemu_log_mask(LOG_UNIMP,"STM32F405_spi_write: " \
+                      "Interrupts and DMA are not implemented\n");
         s->spi_cr2 = value;
         return;
     case SPI_SR:
-        s->spi_sr = value;
+        /* Read only register, except for clearing the CRCERR bit, which
+         * is not supported
+         */
         return;
     case SPI_DR:
+        s->spi_sr |= SPI_SR_BSY;
+        s->spi_sr &= ~SPI_SR_TXE;
         s->spi_dr = value;
         stm32f405_spi_transfer(s);
+        s->spi_sr |= SPI_SR_TXE;
+        s->spi_sr &= ~SPI_SR_BSY;
         return;
-    case SPI_CPCPR:
-        s->spi_cpcpr = value;
+    case SPI_CRCPR:
+        qemu_log_mask(LOG_UNIMP,"STM32F405_spi_write: " \
+                      "CRC is not implemented\n");
         return;
     case SPI_RXCRCR:
-        s->spi_rxcrcr = value;
+        qemu_log_mask(LOG_GUEST_ERROR,
+                      "STM32F405_spi_write: Read only register: " \
+                      "0x%"HWADDR_PRIx"\n", addr);
         return;
     case SPI_TXCRCR:
-        s->spi_txcrcr = value;
+        qemu_log_mask(LOG_GUEST_ERROR,
+                      "STM32F405_spi_write: Read only register: " \
+                      "0x%"HWADDR_PRIx"\n", addr);
         return;
     case SPI_I2SCFGR:
-        s->spi_i2scfgr = value;
+        qemu_log_mask(LOG_UNIMP,"STM32F405_spi_write: " \
+                      "I2S is not implemented\n");
         return;
     case SPI_I2SPR:
-        s->spi_i2spr = value;
+        qemu_log_mask(LOG_UNIMP,"STM32F405_spi_write: " \
+                      "I2S is not implemented\n");
         return;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
