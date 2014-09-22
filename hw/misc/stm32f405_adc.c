@@ -66,8 +66,12 @@
 #define ADC_CR2_CONT    0x02
 #define ADC_CR2_SWSTART 0x40000000
 
+#ifdef RAND_MAX
+/* The rand() function is avaliable */
+#define RAND_AVALIABLE
 #undef RAND_MAX
 #define RAND_MAX 0xFF
+#endif
 
 typedef struct {
     SysBusDevice parent_obj;
@@ -127,7 +131,12 @@ static void stm32f405_adc_reset(DeviceState *dev)
 static uint32_t stm32f405_adc_generate_value(STM32f405AdcState *s)
 {
     /* Attempts to fake some ADC values */
+    #ifdef RAND_AVALIABLE
     s->adc_dr = s->adc_dr + rand();
+    #else
+    s->adc_dr = s->adc_dr + 7;
+    #endif
+
     return s->adc_dr;
 }
 
