@@ -98,8 +98,7 @@ static void netduinoplus2_init(MachineState *machine)
     DeviceState *nrf24l01plus;
     SysBusDevice *busdev;
     void *bus;
-    qemu_irq gpio_in[11][15];
-    //qemu_irq gpio_out[11][15];
+    qemu_irq gpio_in[11][16];
 
     int image_size;
     uint64_t entry;
@@ -161,7 +160,7 @@ static void netduinoplus2_init(MachineState *machine)
         qdev_init_nofail(gpio[i]);
         busdev = SYS_BUS_DEVICE(gpio[i]);
         sysbus_mmio_map(busdev, 0, gpio_addr[i]);
-        for (j = 0; j < 15; j++) {
+        for (j = 0; j < 16; j++) {
             gpio_in[i][j] = qdev_get_gpio_in(gpio[i], j);
             qemu_set_irq(gpio_in[i][j], 0);
         }
@@ -174,9 +173,9 @@ static void netduinoplus2_init(MachineState *machine)
     sysbus_mmio_map(busdev, 0, 0x40013800);
     sysbus_connect_irq(busdev, 0, pic[71]);
     for (i = 0; i < 9; ++i) {
-        for (j = 0; j < 15; j++) {
+        for (j = 0; j < 16; j++) {
             qdev_connect_gpio_out(gpio[i], j, qdev_get_gpio_in(syscfg,
-                                  (i * 15) + j));
+                                  (i * 16) + j));
         }
     }
 
@@ -205,10 +204,10 @@ static void netduinoplus2_init(MachineState *machine)
     qdev_init_nofail(dev);
     busdev = SYS_BUS_DEVICE(dev);
     sysbus_mmio_map(busdev, 0, 0x40013C00);
-    for (i = 0; i < 15; ++i) {
+    for (i = 0; i < 16; ++i) {
         sysbus_connect_irq(busdev, i, pic[exti_irq[i]]);
     }
-    for (j = 0; j < 15; j++) {
+    for (j = 0; j < 16; j++) {
         qdev_connect_gpio_out(syscfg, j, qdev_get_gpio_in(dev, j));
     }
 

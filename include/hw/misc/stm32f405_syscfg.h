@@ -56,7 +56,7 @@ typedef struct {
     uint32_t syscfg_cmpcr;
 
     qemu_irq irq;
-    qemu_irq gpio_out[15];
+    qemu_irq gpio_out[16];
 } STM32f405SyscfgState;
 
 #endif

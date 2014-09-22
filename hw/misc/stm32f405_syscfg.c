@@ -200,8 +200,8 @@ static void stm32f405_syscfg_init(Object *obj)
                           TYPE_STM32F405_SYSCFG, 0x2000);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->mmio);
 
-    qdev_init_gpio_in(DEVICE(obj), stm32f405_syscfg_set_irq, 15 * 9);
-    qdev_init_gpio_out(DEVICE(obj), s->gpio_out, 15);
+    qdev_init_gpio_in(DEVICE(obj), stm32f405_syscfg_set_irq, 16 * 9);
+    qdev_init_gpio_out(DEVICE(obj), s->gpio_out, 16);
 }
 
 static void stm32f405_syscfg_class_init(ObjectClass *klass, void *data)

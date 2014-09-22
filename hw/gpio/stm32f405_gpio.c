@@ -262,7 +262,7 @@ static void stm32f405_gpio_write(void *opaque, hwaddr offset,
     switch (offset) {
     case GPIO_MODER:
         s->gpio_moder = (uint32_t) value;
-        for (i = 0; i < 15; i++) {
+        for (i = 0; i < 16; i++) {
             /* Two bits determine the I/O direction/mode */
             mask = 3U << (i * 2);
 
@@ -344,8 +344,8 @@ static void stm32f405_gpio_initfn(Object *obj)
                           "stm32f405_gpio", 0x2000);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->iomem);
 
-    qdev_init_gpio_in(DEVICE(obj), stm32f405_gpio_set_irq, 15);
-    qdev_init_gpio_out(DEVICE(obj), s->gpio_out, 15);
+    qdev_init_gpio_in(DEVICE(obj), stm32f405_gpio_set_irq, 16);
+    qdev_init_gpio_out(DEVICE(obj), s->gpio_out, 16);
 
     #if (EXTERNAL_TCP_ACCESS == 1)
     /* TCP External Access to GPIO

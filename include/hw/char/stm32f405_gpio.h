@@ -67,7 +67,7 @@
  * This is based on the work by Biff Eros
  * https://sites.google.com/site/bifferboard/Home/howto/qemu
  */
-#define GPIO_PINS 15
+#define GPIO_PINS 16
 #define PANEL_PORT 4321
 
 typedef struct gpio_tcp_connection {
@@ -101,7 +101,7 @@ typedef struct Stm32f405GpioState {
     /* The GPIO letter (a - k) from the datasheet */
     uint8_t gpio_letter;
 
-    qemu_irq gpio_out[15];
+    qemu_irq gpio_out[16];
     const unsigned char *id;
 
     #if (EXTERNAL_TCP_ACCESS == 1)
