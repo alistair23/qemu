@@ -63,8 +63,6 @@
 #include <xseg/xseg.h>
 #include <xseg/protocol.h>
 
-#define ARCHIP_FD_READ      0
-#define ARCHIP_FD_WRITE     1
 #define MAX_REQUEST_SIZE    524288
 
 #define ARCHIPELAGO_OPT_VOLUME      "volume"
@@ -84,6 +82,7 @@ typedef enum {
     ARCHIP_OP_WRITE,
     ARCHIP_OP_FLUSH,
     ARCHIP_OP_VOLINFO,
+    ARCHIP_OP_TRUNCATE,
 } ARCHIPCmd;
 
 typedef struct ArchipelagoAIOCB {
@@ -92,7 +91,6 @@ typedef struct ArchipelagoAIOCB {
     struct BDRVArchipelagoState *s;
     QEMUIOVector *qiov;
     ARCHIPCmd cmd;
-    bool cancelled;
     int status;
     int64_t size;
     int64_t ret;
@@ -248,6 +246,7 @@ static void xseg_request_handler(void *state)
                 }
                 break;
             case ARCHIP_OP_VOLINFO:
+            case ARCHIP_OP_TRUNCATE:
                 s->is_signaled = true;
                 qemu_cond_signal(&s->archip_cond);
                 break;
@@ -318,9 +317,7 @@ static void qemu_archipelago_complete_aio(void *opaque)
     aio_cb->common.cb(aio_cb->common.opaque, aio_cb->ret);
     aio_cb->status = 0;
 
-    if (!aio_cb->cancelled) {
-        qemu_aio_release(aio_cb);
-    }
+    qemu_aio_unref(aio_cb);
     g_free(reqdata);
 }
 
@@ -708,7 +705,8 @@ static int qemu_archipelago_create(const char *filename,
 
     parse_filename_opts(filename, errp, &volname, &segment_name, &mport,
                         &vport);
-    total_size = qemu_opt_get_size_del(options, BLOCK_OPT_SIZE, 0);
+    total_size = ROUND_UP(qemu_opt_get_size_del(options, BLOCK_OPT_SIZE, 0),
+                          BDRV_SECTOR_SIZE);
 
     if (segment_name == NULL) {
         segment_name = g_strdup("archipelago");
@@ -724,19 +722,8 @@ static int qemu_archipelago_create(const char *filename,
     return ret;
 }
 
-static void qemu_archipelago_aio_cancel(BlockDriverAIOCB *blockacb)
-{
-    ArchipelagoAIOCB *aio_cb = (ArchipelagoAIOCB *) blockacb;
-    aio_cb->cancelled = true;
-    while (aio_cb->status == -EINPROGRESS) {
-        aio_poll(bdrv_get_aio_context(aio_cb->common.bs), true);
-    }
-    qemu_aio_release(aio_cb);
-}
-
 static const AIOCBInfo archipelago_aiocb_info = {
     .aiocb_size = sizeof(ArchipelagoAIOCB),
-    .cancel = qemu_archipelago_aio_cancel,
 };
 
 static int archipelago_submit_request(BDRVArchipelagoState *s,
@@ -888,7 +875,6 @@ static BlockDriverAIOCB *qemu_archipelago_aio_rw(BlockDriverState *bs,
 
     aio_cb->ret = 0;
     aio_cb->s = s;
-    aio_cb->cancelled = false;
     aio_cb->status = -EINPROGRESS;
 
     off = sector_num * BDRV_SECTOR_SIZE;
@@ -904,7 +890,7 @@ static BlockDriverAIOCB *qemu_archipelago_aio_rw(BlockDriverState *bs,
 
 err_exit:
     error_report("qemu_archipelago_aio_rw(): I/O Error\n");
-    qemu_aio_release(aio_cb);
+    qemu_aio_unref(aio_cb);
     return NULL;
 }
 
@@ -995,6 +981,64 @@ static int64_t qemu_archipelago_getlength(BlockDriverState *bs)
     return ret;
 }
 
+static int qemu_archipelago_truncate(BlockDriverState *bs, int64_t offset)
+{
+    int ret, targetlen;
+    struct xseg_request *req;
+    BDRVArchipelagoState *s = bs->opaque;
+    AIORequestData *reqdata = g_new(AIORequestData, 1);
+
+    const char *volname = s->volname;
+    targetlen = strlen(volname);
+    req = xseg_get_request(s->xseg, s->srcport, s->mportno, X_ALLOC);
+    if (!req) {
+        archipelagolog("Cannot get XSEG request\n");
+        goto err_exit2;
+    }
+
+    ret = xseg_prep_request(s->xseg, req, targetlen, 0);
+    if (ret < 0) {
+        archipelagolog("Cannot prepare XSEG request\n");
+        goto err_exit;
+    }
+    char *target = xseg_get_target(s->xseg, req);
+    if (!target) {
+        archipelagolog("Cannot get XSEG target\n");
+        goto err_exit;
+    }
+    memcpy(target, volname, targetlen);
+    req->offset = offset;
+    req->op = X_TRUNCATE;
+
+    reqdata->op = ARCHIP_OP_TRUNCATE;
+    reqdata->volname = volname;
+
+    xseg_set_req_data(s->xseg, req, reqdata);
+
+    xport p = xseg_submit(s->xseg, req, s->srcport, X_ALLOC);
+    if (p == NoPort) {
+        archipelagolog("Cannot submit XSEG request\n");
+        goto err_exit;
+    }
+
+    xseg_signal(s->xseg, p);
+    qemu_mutex_lock(&s->archip_mutex);
+    while (!s->is_signaled) {
+        qemu_cond_wait(&s->archip_cond, &s->archip_mutex);
+    }
+    s->is_signaled = false;
+    qemu_mutex_unlock(&s->archip_mutex);
+    xseg_put_request(s->xseg, req, s->srcport);
+    g_free(reqdata);
+    return 0;
+
+err_exit:
+    xseg_put_request(s->xseg, req, s->srcport);
+err_exit2:
+    g_free(reqdata);
+    return -EIO;
+}
+
 static QemuOptsList qemu_archipelago_create_opts = {
     .name = "archipelago-create-opts",
     .head = QTAILQ_HEAD_INITIALIZER(qemu_archipelago_create_opts.head),
@@ -1024,6 +1068,7 @@ static BlockDriver bdrv_archipelago = {
     .bdrv_close          = qemu_archipelago_close,
     .bdrv_create         = qemu_archipelago_create,
     .bdrv_getlength      = qemu_archipelago_getlength,
+    .bdrv_truncate       = qemu_archipelago_truncate,
     .bdrv_aio_readv      = qemu_archipelago_aio_readv,
     .bdrv_aio_writev     = qemu_archipelago_aio_writev,
     .bdrv_aio_flush      = qemu_archipelago_aio_flush,

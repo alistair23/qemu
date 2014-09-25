@@ -188,7 +188,8 @@ static void xen_ram_init(ram_addr_t *below_4g_mem_size,
          */
         block_len = (1ULL << 32) + *above_4g_mem_size;
     }
-    memory_region_init_ram(&ram_memory, NULL, "xen.ram", block_len);
+    memory_region_init_ram(&ram_memory, NULL, "xen.ram", block_len,
+                           &error_abort);
     *ram_memory_p = &ram_memory;
     vmstate_register_ram_global(&ram_memory);
 
@@ -978,6 +979,7 @@ static void xen_wakeup_notifier(Notifier *notifier, void *data)
     xc_set_hvm_param(xen_xc, xen_domid, HVM_PARAM_ACPI_S_STATE, 0);
 }
 
+/* return 0 means OK, or -1 means critical issue -- will exit(1) */
 int xen_hvm_init(ram_addr_t *below_4g_mem_size, ram_addr_t *above_4g_mem_size,
                  MemoryRegion **ram_memory)
 {
@@ -991,15 +993,13 @@ int xen_hvm_init(ram_addr_t *below_4g_mem_size, ram_addr_t *above_4g_mem_size,
     state->xce_handle = xen_xc_evtchn_open(NULL, 0);
     if (state->xce_handle == XC_HANDLER_INITIAL_VALUE) {
         perror("xen: event channel open");
-        g_free(state);
-        return -errno;
+        return -1;
     }
 
     state->xenstore = xs_daemon_open();
     if (state->xenstore == NULL) {
         perror("xen: xenstore open");
-        g_free(state);
-        return -errno;
+        return -1;
     }
 
     state->exit.notify = xen_exit_notifier;
@@ -1069,7 +1069,7 @@ int xen_hvm_init(ram_addr_t *below_4g_mem_size, ram_addr_t *above_4g_mem_size,
     /* Initialize backend core & drivers */
     if (xen_be_init() != 0) {
         fprintf(stderr, "%s: xen backend core setup failed\n", __FUNCTION__);
-        exit(1);
+        return -1;
     }
     xen_be_register("console", &xen_console_ops);
     xen_be_register("vkbd", &xen_kbdmouse_ops);

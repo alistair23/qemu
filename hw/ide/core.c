@@ -372,23 +372,21 @@ static void trim_aio_cancel(BlockDriverAIOCB *acb)
 {
     TrimAIOCB *iocb = container_of(acb, TrimAIOCB, common);
 
-    /* Exit the loop in case bdrv_aio_cancel calls ide_issue_trim_cb again.  */
+    /* Exit the loop so ide_issue_trim_cb will not continue  */
     iocb->j = iocb->qiov->niov - 1;
     iocb->i = (iocb->qiov->iov[iocb->j].iov_len / 8) - 1;
 
-    /* Tell ide_issue_trim_cb not to trigger the completion, too.  */
-    qemu_bh_delete(iocb->bh);
-    iocb->bh = NULL;
+    iocb->ret = -ECANCELED;
 
     if (iocb->aiocb) {
-        bdrv_aio_cancel(iocb->aiocb);
+        bdrv_aio_cancel_async(iocb->aiocb);
+        iocb->aiocb = NULL;
     }
-    qemu_aio_release(iocb);
 }
 
 static const AIOCBInfo trim_aiocb_info = {
     .aiocb_size         = sizeof(TrimAIOCB),
-    .cancel             = trim_aio_cancel,
+    .cancel_async       = trim_aio_cancel,
 };
 
 static void ide_trim_bh_cb(void *opaque)
@@ -399,7 +397,7 @@ static void ide_trim_bh_cb(void *opaque)
 
     qemu_bh_delete(iocb->bh);
     iocb->bh = NULL;
-    qemu_aio_release(iocb);
+    qemu_aio_unref(iocb);
 }
 
 static void ide_issue_trim_cb(void *opaque, int ret)
@@ -568,7 +566,10 @@ static void ide_sector_read_cb(void *opaque, int ret)
     s->pio_aiocb = NULL;
     s->status &= ~BUSY_STAT;
 
-    bdrv_acct_done(s->bs, &s->acct);
+    if (ret == -ECANCELED) {
+        return;
+    }
+    block_acct_done(bdrv_get_stats(s->bs), &s->acct);
     if (ret != 0) {
         if (ide_handle_rw_error(s, -ret, IDE_RETRY_PIO |
                                 IDE_RETRY_READ)) {
@@ -624,7 +625,8 @@ void ide_sector_read(IDEState *s)
     s->iov.iov_len  = n * BDRV_SECTOR_SIZE;
     qemu_iovec_init_external(&s->qiov, &s->iov, 1);
 
-    bdrv_acct_start(s->bs, &s->acct, n * BDRV_SECTOR_SIZE, BDRV_ACCT_READ);
+    block_acct_start(bdrv_get_stats(s->bs), &s->acct,
+                     n * BDRV_SECTOR_SIZE, BLOCK_ACCT_READ);
     s->pio_aiocb = bdrv_aio_readv(s->bs, sector_num, &s->qiov, n,
                                   ide_sector_read_cb, s);
 }
@@ -677,6 +679,9 @@ void ide_dma_cb(void *opaque, int ret)
     int64_t sector_num;
     bool stay_active = false;
 
+    if (ret == -ECANCELED) {
+        return;
+    }
     if (ret < 0) {
         int op = IDE_RETRY_DMA;
 
@@ -756,7 +761,7 @@ void ide_dma_cb(void *opaque, int ret)
 
 eot:
     if (s->dma_cmd == IDE_DMA_READ || s->dma_cmd == IDE_DMA_WRITE) {
-        bdrv_acct_done(s->bs, &s->acct);
+        block_acct_done(bdrv_get_stats(s->bs), &s->acct);
     }
     ide_set_inactive(s, stay_active);
 }
@@ -770,12 +775,12 @@ static void ide_sector_start_dma(IDEState *s, enum ide_dma_cmd dma_cmd)
 
     switch (dma_cmd) {
     case IDE_DMA_READ:
-        bdrv_acct_start(s->bs, &s->acct, s->nsector * BDRV_SECTOR_SIZE,
-                        BDRV_ACCT_READ);
+        block_acct_start(bdrv_get_stats(s->bs), &s->acct,
+                         s->nsector * BDRV_SECTOR_SIZE, BLOCK_ACCT_READ);
         break;
     case IDE_DMA_WRITE:
-        bdrv_acct_start(s->bs, &s->acct, s->nsector * BDRV_SECTOR_SIZE,
-                        BDRV_ACCT_WRITE);
+        block_acct_start(bdrv_get_stats(s->bs), &s->acct,
+                         s->nsector * BDRV_SECTOR_SIZE, BLOCK_ACCT_WRITE);
         break;
     default:
         break;
@@ -802,7 +807,10 @@ static void ide_sector_write_cb(void *opaque, int ret)
     IDEState *s = opaque;
     int n;
 
-    bdrv_acct_done(s->bs, &s->acct);
+    if (ret == -ECANCELED) {
+        return;
+    }
+    block_acct_done(bdrv_get_stats(s->bs), &s->acct);
 
     s->pio_aiocb = NULL;
     s->status &= ~BUSY_STAT;
@@ -869,7 +877,8 @@ void ide_sector_write(IDEState *s)
     s->iov.iov_len  = n * BDRV_SECTOR_SIZE;
     qemu_iovec_init_external(&s->qiov, &s->iov, 1);
 
-    bdrv_acct_start(s->bs, &s->acct, n * BDRV_SECTOR_SIZE, BDRV_ACCT_READ);
+    block_acct_start(bdrv_get_stats(s->bs), &s->acct,
+                     n * BDRV_SECTOR_SIZE, BLOCK_ACCT_READ);
     s->pio_aiocb = bdrv_aio_writev(s->bs, sector_num, &s->qiov, n,
                                    ide_sector_write_cb, s);
 }
@@ -880,6 +889,9 @@ static void ide_flush_cb(void *opaque, int ret)
 
     s->pio_aiocb = NULL;
 
+    if (ret == -ECANCELED) {
+        return;
+    }
     if (ret < 0) {
         /* XXX: What sector number to set here? */
         if (ide_handle_rw_error(s, -ret, IDE_RETRY_FLUSH)) {
@@ -888,7 +900,7 @@ static void ide_flush_cb(void *opaque, int ret)
     }
 
     if (s->bs) {
-        bdrv_acct_done(s->bs, &s->acct);
+        block_acct_done(bdrv_get_stats(s->bs), &s->acct);
     }
     s->status = READY_STAT | SEEK_STAT;
     ide_cmd_done(s);
@@ -903,7 +915,7 @@ void ide_flush_cache(IDEState *s)
     }
 
     s->status |= BUSY_STAT;
-    bdrv_acct_start(s->bs, &s->acct, 0, BDRV_ACCT_FLUSH);
+    block_acct_start(bdrv_get_stats(s->bs), &s->acct, 0, BLOCK_ACCT_FLUSH);
     s->pio_aiocb = bdrv_aio_flush(s->bs, ide_flush_cb, s);
 }
 

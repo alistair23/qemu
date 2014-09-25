@@ -3363,9 +3363,8 @@ static int coroutine_fn bdrv_aligned_pwritev(BlockDriverState *bs,
 
     bdrv_set_dirty(bs, sector_num, nb_sectors);
 
-    if (bs->wr_highest_sector < sector_num + nb_sectors - 1) {
-        bs->wr_highest_sector = sector_num + nb_sectors - 1;
-    }
+    block_acct_highest_sector(&bs->stats, sector_num, nb_sectors);
+
     if (bs->growable && ret >= 0) {
         bs->total_sectors = MAX(bs->total_sectors, sector_num + nb_sectors);
     }
@@ -3639,6 +3638,19 @@ BlockErrorAction bdrv_get_error_action(BlockDriverState *bs, bool is_read, int e
     }
 }
 
+static void send_qmp_error_event(BlockDriverState *bs,
+                                 BlockErrorAction action,
+                                 bool is_read, int error)
+{
+    BlockErrorAction ac;
+
+    ac = is_read ? IO_OPERATION_TYPE_READ : IO_OPERATION_TYPE_WRITE;
+    qapi_event_send_block_io_error(bdrv_get_device_name(bs), ac, action,
+                                   bdrv_iostatus_is_enabled(bs),
+                                   error == ENOSPC, strerror(error),
+                                   &error_abort);
+}
+
 /* This is done by device models because, while the block layer knows
  * about the error, it does not know whether an operation comes from
  * the device or the block layer (from a job, for example).
@@ -3664,16 +3676,10 @@ void bdrv_error_action(BlockDriverState *bs, BlockErrorAction action,
          * also ensures that the STOP/RESUME pair of events is emitted.
          */
         qemu_system_vmstop_request_prepare();
-        qapi_event_send_block_io_error(bdrv_get_device_name(bs),
-                                       is_read ? IO_OPERATION_TYPE_READ :
-                                       IO_OPERATION_TYPE_WRITE,
-                                       action, &error_abort);
+        send_qmp_error_event(bs, action, is_read, error);
         qemu_system_vmstop_request(RUN_STATE_IO_ERROR);
     } else {
-        qapi_event_send_block_io_error(bdrv_get_device_name(bs),
-                                       is_read ? IO_OPERATION_TYPE_READ :
-                                       IO_OPERATION_TYPE_WRITE,
-                                       action, &error_abort);
+        send_qmp_error_event(bs, action, is_read, error);
     }
 }
 
@@ -4634,7 +4640,28 @@ int bdrv_aio_multiwrite(BlockDriverState *bs, BlockRequest *reqs, int num_reqs)
 
 void bdrv_aio_cancel(BlockDriverAIOCB *acb)
 {
-    acb->aiocb_info->cancel(acb);
+    qemu_aio_ref(acb);
+    bdrv_aio_cancel_async(acb);
+    while (acb->refcnt > 1) {
+        if (acb->aiocb_info->get_aio_context) {
+            aio_poll(acb->aiocb_info->get_aio_context(acb), true);
+        } else if (acb->bs) {
+            aio_poll(bdrv_get_aio_context(acb->bs), true);
+        } else {
+            abort();
+        }
+    }
+    qemu_aio_unref(acb);
+}
+
+/* Async version of aio cancel. The caller is not blocked if the acb implements
+ * cancel_async, otherwise we do nothing and let the request normally complete.
+ * In either case the completion callback must be called. */
+void bdrv_aio_cancel_async(BlockDriverAIOCB *acb)
+{
+    if (acb->aiocb_info->cancel_async) {
+        acb->aiocb_info->cancel_async(acb);
+    }
 }
 
 /**************************************************************/
@@ -4650,18 +4677,8 @@ typedef struct BlockDriverAIOCBSync {
     int is_write;
 } BlockDriverAIOCBSync;
 
-static void bdrv_aio_cancel_em(BlockDriverAIOCB *blockacb)
-{
-    BlockDriverAIOCBSync *acb =
-        container_of(blockacb, BlockDriverAIOCBSync, common);
-    qemu_bh_delete(acb->bh);
-    acb->bh = NULL;
-    qemu_aio_release(acb);
-}
-
 static const AIOCBInfo bdrv_em_aiocb_info = {
     .aiocb_size         = sizeof(BlockDriverAIOCBSync),
-    .cancel             = bdrv_aio_cancel_em,
 };
 
 static void bdrv_aio_bh_cb(void *opaque)
@@ -4675,7 +4692,7 @@ static void bdrv_aio_bh_cb(void *opaque)
     acb->common.cb(acb->common.opaque, acb->ret);
     qemu_bh_delete(acb->bh);
     acb->bh = NULL;
-    qemu_aio_release(acb);
+    qemu_aio_unref(acb);
 }
 
 static BlockDriverAIOCB *bdrv_aio_rw_vector(BlockDriverState *bs,
@@ -4732,22 +4749,8 @@ typedef struct BlockDriverAIOCBCoroutine {
     QEMUBH* bh;
 } BlockDriverAIOCBCoroutine;
 
-static void bdrv_aio_co_cancel_em(BlockDriverAIOCB *blockacb)
-{
-    AioContext *aio_context = bdrv_get_aio_context(blockacb->bs);
-    BlockDriverAIOCBCoroutine *acb =
-        container_of(blockacb, BlockDriverAIOCBCoroutine, common);
-    bool done = false;
-
-    acb->done = &done;
-    while (!done) {
-        aio_poll(aio_context, true);
-    }
-}
-
 static const AIOCBInfo bdrv_em_co_aiocb_info = {
     .aiocb_size         = sizeof(BlockDriverAIOCBCoroutine),
-    .cancel             = bdrv_aio_co_cancel_em,
 };
 
 static void bdrv_co_em_bh(void *opaque)
@@ -4756,12 +4759,8 @@ static void bdrv_co_em_bh(void *opaque)
 
     acb->common.cb(acb->common.opaque, acb->req.error);
 
-    if (acb->done) {
-        *acb->done = true;
-    }
-
     qemu_bh_delete(acb->bh);
-    qemu_aio_release(acb);
+    qemu_aio_unref(acb);
 }
 
 /* Invoke bdrv_co_do_readv/bdrv_co_do_writev */
@@ -4800,7 +4799,6 @@ static BlockDriverAIOCB *bdrv_co_aio_rw_vector(BlockDriverState *bs,
     acb->req.qiov = qiov;
     acb->req.flags = flags;
     acb->is_write = is_write;
-    acb->done = NULL;
 
     co = qemu_coroutine_create(bdrv_co_do_rw);
     qemu_coroutine_enter(co, acb);
@@ -4827,7 +4825,6 @@ BlockDriverAIOCB *bdrv_aio_flush(BlockDriverState *bs,
     BlockDriverAIOCBCoroutine *acb;
 
     acb = qemu_aio_get(&bdrv_em_co_aiocb_info, bs, cb, opaque);
-    acb->done = NULL;
 
     co = qemu_coroutine_create(bdrv_aio_flush_co_entry);
     qemu_coroutine_enter(co, acb);
@@ -4857,7 +4854,6 @@ BlockDriverAIOCB *bdrv_aio_discard(BlockDriverState *bs,
     acb = qemu_aio_get(&bdrv_em_co_aiocb_info, bs, cb, opaque);
     acb->req.sector = sector_num;
     acb->req.nb_sectors = nb_sectors;
-    acb->done = NULL;
     co = qemu_coroutine_create(bdrv_aio_discard_co_entry);
     qemu_coroutine_enter(co, acb);
 
@@ -4885,13 +4881,23 @@ void *qemu_aio_get(const AIOCBInfo *aiocb_info, BlockDriverState *bs,
     acb->bs = bs;
     acb->cb = cb;
     acb->opaque = opaque;
+    acb->refcnt = 1;
     return acb;
 }
 
-void qemu_aio_release(void *p)
+void qemu_aio_ref(void *p)
 {
     BlockDriverAIOCB *acb = p;
-    g_slice_free1(acb->aiocb_info->aiocb_size, acb);
+    acb->refcnt++;
+}
+
+void qemu_aio_unref(void *p)
+{
+    BlockDriverAIOCB *acb = p;
+    assert(acb->refcnt > 0);
+    if (--acb->refcnt == 0) {
+        g_slice_free1(acb->aiocb_info->aiocb_size, acb);
+    }
 }
 
 /**************************************************************/
@@ -5566,27 +5572,6 @@ void bdrv_iostatus_set_err(BlockDriverState *bs, int error)
     }
 }
 
-void
-bdrv_acct_start(BlockDriverState *bs, BlockAcctCookie *cookie, int64_t bytes,
-        enum BlockAcctType type)
-{
-    assert(type < BDRV_MAX_IOTYPE);
-
-    cookie->bytes = bytes;
-    cookie->start_time_ns = get_clock();
-    cookie->type = type;
-}
-
-void
-bdrv_acct_done(BlockDriverState *bs, BlockAcctCookie *cookie)
-{
-    assert(cookie->type < BDRV_MAX_IOTYPE);
-
-    bs->nr_bytes[cookie->type] += cookie->bytes;
-    bs->nr_ops[cookie->type]++;
-    bs->total_time_ns[cookie->type] += get_clock() - cookie->start_time_ns;
-}
-
 void bdrv_img_create(const char *filename, const char *fmt,
                      const char *base_filename, const char *base_fmt,
                      char *options, uint64_t img_size, int flags,
@@ -6102,4 +6087,15 @@ void bdrv_refresh_filename(BlockDriverState *bs)
                  qstring_get_str(json));
         QDECREF(json);
     }
+}
+
+/* This accessor function purpose is to allow the device models to access the
+ * BlockAcctStats structure embedded inside a BlockDriverState without being
+ * aware of the BlockDriverState structure layout.
+ * It will go away when the BlockAcctStats structure will be moved inside
+ * the device models.
+ */
+BlockAcctStats *bdrv_get_stats(BlockDriverState *bs)
+{
+    return &bs->stats;
 }
