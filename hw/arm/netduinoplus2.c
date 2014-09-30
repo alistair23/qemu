@@ -119,7 +119,8 @@ static void netduinoplus2_init(MachineState *machine)
     cpu = cpu_arm_init(cpu_model);
     env = &cpu->env;
 
-    memory_region_init_ram(flash, NULL, "netduino.flash", FLASH_SIZE);
+    memory_region_init_ram(flash, NULL, "netduino.flash", FLASH_SIZE,
+                           &error_abort);
     memory_region_init_alias(flash_alias, NULL, "netduino.flash.alias",
                              flash, 0, FLASH_SIZE);
 
@@ -131,7 +132,8 @@ static void netduinoplus2_init(MachineState *machine)
     memory_region_add_subregion(system_memory, FLASH_BASE_ADDRESS, flash);
     memory_region_add_subregion(system_memory, 0, flash_alias);
 
-    memory_region_init_ram(sram, NULL, "netduino.sram", SRAM_SIZE);
+    memory_region_init_ram(sram, NULL, "netduino.sram", SRAM_SIZE,
+                           &error_abort);
     vmstate_register_ram_global(sram);
     memory_region_add_subregion(system_memory, SRAM_BASE_ADDRESS, sram);
 
@@ -237,7 +239,7 @@ static void netduinoplus2_init(MachineState *machine)
      * space.  This stops qemu complaining about executing code outside RAM
      * when returning from an exception.
      */
-    memory_region_init_ram(hack, NULL, "netduino.hack", 0x1000);
+    memory_region_init_ram(hack, NULL, "netduino.hack", 0x1000, &error_abort);
     vmstate_register_ram_global(hack);
     memory_region_set_readonly(hack, true);
     memory_region_add_subregion(system_memory, 0xfffff000, hack);
