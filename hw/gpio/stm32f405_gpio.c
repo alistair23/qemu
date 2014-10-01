@@ -95,18 +95,17 @@ static int tcp_connection_getpins(gpio_tcp_connection* c,
                                   const char* command, uint32_t* reg)
 {
     char str[100];
-    fd_set rfds, efds;
+    fd_set rfds;
     int t, i;
-    /* Wait for a response from peripheral, assume it arrives all together
-     * (likely since it's only a few bytes long)
-     */
 
     rfds = c->fds;
-    efds = c->fds;
 
-    if (select(c->socket + 1, &rfds, NULL, &efds, NULL) == -1) {
+    if (select(c->socket + 1, &rfds, NULL, NULL, NULL) == -1) {
+        if (EINTR == errno) {
+            return 0;
+        }
         fprintf(stderr, "%s: Select failed\n", __func__);
-        return 1;
+        exit(1);
     }
 
     if (FD_ISSET(c->socket, &rfds)) {
@@ -122,6 +121,7 @@ static int tcp_connection_getpins(gpio_tcp_connection* c,
                 }
                 *reg = *reg >> 16;
                 DB_PRINT("Reg is: 0x%x\n", *reg);
+                return sizeof(str);
             } else {
                 DB_PRINT("Invalid data recieved\n");
             }
@@ -136,10 +136,6 @@ static int tcp_connection_getpins(gpio_tcp_connection* c,
         }
     }
 
-    if (FD_ISSET(c->socket, &efds)) {
-        DB_PRINT("Connection closed\n");
-        exit(1);
-    }
     return 0;
 }
 
@@ -158,19 +154,19 @@ static void gpio_pin_write(gpio_tcp_connection* c, char gpio_letter,
 static uint32_t gpio_pin_read(Stm32f405GpioState *s,
                               char gpio_letter, hwaddr addr)
 {
-    gpio_tcp_connection* c = &s->tcp_info;
+    gpio_tcp_connection c = s->tcp_info;
     char command[100];
     int i, len = 1;
     /* Assume all values are low by default */
     uint32_t out = 0x00000000;
     uint32_t changes, prev_out = 0x00000000;
 
-    sprintf(command, "GPIO R %c 0x%" HWADDR_PRIx "\r\n", gpio_letter, addr);
-    tcp_connection_command(c, command);
+    sprintf(command, "GPIO R %c %" HWADDR_PRId "\r\n", gpio_letter, addr);
+    tcp_connection_command(&c, command);
 
     sprintf(command, "GPIO R %c ", gpio_letter);
     while (len) {
-        len = tcp_connection_getpins(c, command, &out);
+        len = tcp_connection_getpins(&c, command, &out);
     }
 
     changes = out ^ prev_out;
