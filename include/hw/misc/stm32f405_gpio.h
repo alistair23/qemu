@@ -60,9 +60,9 @@
 #define STM32F405_GPIO(obj) OBJECT_CHECK(Stm32f405GpioState, (obj), \
                            TYPE_STM32F405_GPIO)
 
-#define EXTERNAL_TCP_ACCESS 0
+#define EXTERNAL_TCP_ACCESS 1
 
-#if (EXTERNAL_TCP_ACCESS == 1)
+#if EXTERNAL_TCP_ACCESS
 /* TCP External Access to GPIO
  * This is based on the work by Biff Eros
  * https://sites.google.com/site/bifferboard/Home/howto/qemu
@@ -104,7 +104,7 @@ typedef struct Stm32f405GpioState {
     qemu_irq gpio_out[16];
     const unsigned char *id;
 
-    #if (EXTERNAL_TCP_ACCESS == 1)
+    #if EXTERNAL_TCP_ACCESS
     /* TCP External Access to GPIO
      * This is based on the work by Biff Eros
      * https://sites.google.com/site/bifferboard/Home/howto/qemu

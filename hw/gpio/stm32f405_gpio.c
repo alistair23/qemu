@@ -22,7 +22,7 @@
  * THE SOFTWARE.
  */
 
-#include "hw/char/stm32f405_gpio.h"
+#include "hw/misc/stm32f405_gpio.h"
 
 #ifndef ST_GPIO_ERR_DEBUG
 #define ST_GPIO_ERR_DEBUG 0
