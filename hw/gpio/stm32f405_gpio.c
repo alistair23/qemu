@@ -49,7 +49,7 @@ static void stm32f405_gpio_set_irq(void * opaque, int irq, int level)
     qemu_set_irq(s->gpio_out[irq], !!((!!level << irq) & (0xFFFF ^ s->gpio_direction)));
 }
 
-#if (EXTERNAL_TCP_ACCESS == 1)
+#if EXTERNAL_TCP_ACCESS
 /* TCP External Access to GPIO
  * This is based on the work by Biff Eros
  * https://sites.google.com/site/bifferboard/Home/howto/qemu
@@ -84,7 +84,7 @@ static int tcp_connection_open(gpio_tcp_connection* c)
 
 static void tcp_connection_command(gpio_tcp_connection* c, const char* command)
 {
-    if (send(c->socket, command, strlen(command), 0) == -1) {
+    if (send(c->socket, command, strlen(command), 0) < 0) {
         fprintf(stderr, "%s: Sending failed\n", __func__);
         exit(1);
     }
@@ -231,7 +231,7 @@ static uint64_t stm32f405_gpio_read(void *opaque, hwaddr offset,
         return s->gpio_pupdr;
     case GPIO_IDR:
         /* This register changes based on the external GPIO pins */
-        #if (EXTERNAL_TCP_ACCESS == 1)
+        #if EXTERNAL_TCP_ACCESS
         s->gpio_idr = gpio_pin_read(s, s->gpio_letter, offset);
         #endif
         return s->gpio_idr & s->gpio_direction;
@@ -291,7 +291,7 @@ static void stm32f405_gpio_write(void *opaque, hwaddr offset,
                       s->gpio_letter, (int)offset);
         return;
     case GPIO_ODR:
-        #if (EXTERNAL_TCP_ACCESS == 1)
+        #if EXTERNAL_TCP_ACCESS
         gpio_pin_write(&s->tcp_info, s->gpio_letter, offset, value);
         #endif
         s->gpio_odr = ((uint32_t) value & (~s->gpio_direction));
@@ -347,7 +347,7 @@ static void stm32f405_gpio_initfn(Object *obj)
     qdev_init_gpio_in(DEVICE(obj), stm32f405_gpio_set_irq, 16);
     qdev_init_gpio_out(DEVICE(obj), s->gpio_out, 16);
 
-    #if (EXTERNAL_TCP_ACCESS == 1)
+    #if EXTERNAL_TCP_ACCESS
     /* TCP External Access to GPIO
      * This is based on the work by Biff Eros
      * https://sites.google.com/site/bifferboard/Home/howto/qemu
