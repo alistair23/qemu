@@ -102,17 +102,17 @@ class Terminal(asynchat.async_chat):
         print "Read  :: Address: ", reg
         if reg == 16:
           if self.data.startswith("GPIO R a "):
-            self.push('GPIO R a '+reg_string+' '+''.join(map(str, self.pins_a)))
+            self.push('GPIO R a '+''.join(map(str, self.pins_a)))
           elif self.data.startswith("GPIO R b "):
-            self.push('GPIO R b '+reg_string+' '+''.join(map(str, self.pins_b)))
+            self.push('GPIO R b '+''.join(map(str, self.pins_b)))
           elif self.data.startswith("GPIO R c "):
-            self.push('GPIO R c '+reg_string+' '+''.join(map(str, self.pins_c)))
+            self.push('GPIO R c '+''.join(map(str, self.pins_c)))
           elif self.data.startswith("GPIO R d "):
-            self.push('GPIO R d '+reg_string+' '+''.join(map(str, self.pins_d)))
+            self.push('GPIO R d '+''.join(map(str, self.pins_d)))
           elif self.data.startswith("GPIO R e "):
-            self.push('GPIO R e '+reg_string+' '+''.join(map(str, self.pins_e)))
+            self.push('GPIO R e '+''.join(map(str, self.pins_e)))
           elif self.data.startswith("GPIO R f "):
-            self.push('GPIO R f '+reg_string+' '+''.join(map(str, self.pins_f)))
+            self.push('GPIO R f '+''.join(map(str, self.pins_f)))
     else:
       print "Received invalid command", repr(self.data)
     self.data = ""
