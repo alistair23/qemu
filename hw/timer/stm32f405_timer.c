@@ -64,10 +64,12 @@ static void stm32f405_timer_set_alarm(STM32f405TimerState *s)
 {
     uint32_t ticks;
     int64_t now;
+
     DB_PRINT("Alarm set at: 0x%x\n", s->tim_cr1);
 
-    now = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) * (get_ticks_per_sec() / 1000000000);
-    ticks = s->tim_arr - ((s->tick_offset + now) * (s->tim_psc + 1));
+    now = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
+    ticks = s->tim_arr - ((s->tick_offset + (now * s->freq_hz)) /
+            (s->tim_psc + 1));
 
     DB_PRINT("Alarm set in %d ticks\n", ticks);
 
@@ -76,7 +78,8 @@ static void stm32f405_timer_set_alarm(STM32f405TimerState *s)
         stm32f405_timer_interrupt(s);
     } else {
         timer_mod(s->timer, now + (int64_t) ticks);
-        DB_PRINT("Wait Time: %" PRId64 " ticks\n", now + (int64_t) ticks);
+        DB_PRINT("Wait Time: %" PRId64 " ticks\n", now +
+                 (int64_t) ticks / s->freq_hz);
     }
 }
 
@@ -104,7 +107,7 @@ static void stm32f405_timer_reset(DeviceState *dev)
     s->tim_dmar = 0;
     s->tim_or = 0;
 
-    s->tick_offset = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) / get_ticks_per_sec();
+    s->tick_offset = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) / s->freq_hz;
 }
 
 static uint64_t stm32f405_timer_read(void *opaque, hwaddr offset,
@@ -135,7 +138,7 @@ static uint64_t stm32f405_timer_read(void *opaque, hwaddr offset,
         return s->tim_ccer;
     case TIM_CNT:
         s->tim_cnt = s->tick_offset + (qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) /
-                                       get_ticks_per_sec());
+                                       s->freq_hz);
         return s->tim_cnt;
     case TIM_PSC:
         return s->tim_psc;
@@ -277,6 +280,11 @@ static const VMStateDescription vmstate_stm32f405_timer = {
     }
 };
 
+static Property stm32f405_timer_properties[] = {
+    DEFINE_PROP_UINT64("clock-frequency", struct STM32f405TimerState,
+                       freq_hz, 1000000000),
+    DEFINE_PROP_END_OF_LIST(),
+};
 
 static void stm32f405_timer_init(Object *obj)
 {
@@ -288,8 +296,6 @@ static void stm32f405_timer_init(Object *obj)
                           "stm32f405_timer", 0x2000);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->iomem);
 
-    s->tick_offset = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) / get_ticks_per_sec();
-
     s->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, stm32f405_timer_interrupt, s);
 }
 
@@ -298,6 +304,7 @@ static void stm32f405_timer_class_init(ObjectClass *klass, void *data)
     DeviceClass *dc = DEVICE_CLASS(klass);
 
     dc->reset = stm32f405_timer_reset;
+    dc->props = stm32f405_timer_properties;
     dc->vmsd = &vmstate_stm32f405_timer;
 }
 

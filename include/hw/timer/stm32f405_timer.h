@@ -75,6 +75,7 @@ typedef struct STM32f405TimerState {
     qemu_irq irq;
 
     uint32_t tick_offset;
+    uint64_t freq_hz;
 
     uint32_t tim_cr1;
     uint32_t tim_cr2;
