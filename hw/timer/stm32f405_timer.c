@@ -67,13 +67,9 @@ static void stm32f405_timer_set_alarm(STM32f405TimerState *s)
 
     DB_PRINT("Alarm set at: 0x%x\n", s->tim_cr1);
 
-    now = qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL); // (ms)
-    // (cycles) - ((ms * (cycles/s * 1/1000)) + ((ms) * ((cyclyes/s) / 1000))) / (pre-scalar);
-    // (cycles) - ((ms * (cycles/ms)) + ((ms) * (cyclyes/ms))) / (pre-scalar);
-    // (cycles) - ((cycles) + (cyclyes)) / (pre-scalar);
-
+    now = qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL);
     ticks = s->tim_arr - ((s->tick_offset + (now * (s->freq_hz / 1000))) /
-            (s->tim_psc + 1)); // (scaled-cycles)
+            (s->tim_psc + 1));
 
     DB_PRINT("Alarm set in %d ticks\n", ticks);
 
@@ -81,8 +77,8 @@ static void stm32f405_timer_set_alarm(STM32f405TimerState *s)
         timer_del(s->timer);
         stm32f405_timer_interrupt(s);
     } else {
-        // (scaled-cycles) + (scaled-cylces)
-        timer_mod(s->timer, ((now * (s->freq_hz / 1000)) / (s->tim_psc + 1)) + (int64_t) ticks);
+        timer_mod(s->timer, ((now * (s->freq_hz / 1000)) / (s->tim_psc + 1)) +
+                             (int64_t) ticks);
         DB_PRINT("Wait Time: %" PRId64 " ticks\n", now +
                  (int64_t) ticks / s->freq_hz);
     }
@@ -142,9 +138,6 @@ static uint64_t stm32f405_timer_read(void *opaque, hwaddr offset,
     case TIM_CCER:
         return s->tim_ccer;
     case TIM_CNT:
-        // (cycles) + (ms * (cycles/s * 1/1000)
-        // (cycles) + (ms * (cycles/ms)
-        // (cycles) + (cycles)
         s->tim_cnt = s->tick_offset + (qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL) *
                                        (s->freq_hz / 1000));
         return s->tim_cnt;
