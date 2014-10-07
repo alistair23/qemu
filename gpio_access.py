@@ -17,7 +17,7 @@ class AlarmException(Exception):
     self.dont_update = 1
     raise AlarmException
 
-  def nonBlockingRawInput(self, prompt='', timeout=1):
+  def nonBlockingRawInput(self, prompt='', timeout=10):
     signal.signal(signal.SIGALRM, self.alarmHandler)
     signal.alarm(timeout)
     if self.dont_update == 1:
@@ -63,7 +63,9 @@ class Terminal(asynchat.async_chat):
   def execute_cmd(self, cmd):
     if cmd.startswith("GPIO S "):
       print "Set   :: ", repr(cmd)
-      self.push(cmd)
+      print "Unimplemented - Coming Soon"
+      # To do - Use this to set the value of the server regs
+      # DO NOT push the command
     elif cmd == '':
       return
     else:
