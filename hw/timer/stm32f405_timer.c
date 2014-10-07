@@ -79,8 +79,9 @@ static void stm32f405_timer_set_alarm(STM32f405TimerState *s)
     } else {
         timer_mod(s->timer, ((now * (s->freq_hz / 1000)) / (s->tim_psc + 1)) +
                              (int64_t) ticks);
-        DB_PRINT("Wait Time: %" PRId64 " ticks\n", now +
-                 (int64_t) ticks / s->freq_hz);
+        DB_PRINT("Wait Time: %" PRId64 " ticks\n",
+                 ((now * (s->freq_hz / 1000)) / (s->tim_psc + 1)) +
+                 (int64_t) ticks);
     }
 }
 
