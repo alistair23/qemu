@@ -198,7 +198,8 @@ static uint32_t gpio_pin_read(Stm32f405GpioState *s,
     int i, len = 1;
     /* Assume all values are low by default */
     uint32_t out = 0x00000000;
-    uint32_t changes, prev_out = 0x00000000;
+    uint32_t changes;
+    static uint32_t prev_out = 0x00000000;
 
     sprintf(command, "GPIO R %c %" HWADDR_PRId "\r\n", gpio_letter, addr);
     tcp_connection_command(&c, command);
@@ -211,6 +212,7 @@ static uint32_t gpio_pin_read(Stm32f405GpioState *s,
     changes = out ^ prev_out;
     for (i = 0; i < 16; i++) {
         if (changes & (1 << i)) {
+            DB_PRINT("Out: 0x%x; Changes: 0x%x\n", out, changes);
             stm32f405_gpio_set_irq(s, i, out & (1 << i));
         }
     }
