@@ -67,9 +67,13 @@ static void stm32f405_timer_set_alarm(STM32f405TimerState *s)
 
     DB_PRINT("Alarm set at: 0x%x\n", s->tim_cr1);
 
-    now = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
-    ticks = s->tim_arr - ((s->tick_offset + (now * s->freq_hz)) /
-            (s->tim_psc + 1));
+    now = qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL); // (ms)
+    // (cycles) - ((ms * (cycles/s * 1/1000)) + ((ms) * ((cyclyes/s) / 1000))) / (pre-scalar);
+    // (cycles) - ((ms * (cycles/ms)) + ((ms) * (cyclyes/ms))) / (pre-scalar);
+    // (cycles) - ((cycles) + (cyclyes)) / (pre-scalar);
+
+    ticks = s->tim_arr - ((s->tick_offset + (now * (s->freq_hz / 1000))) /
+            (s->tim_psc + 1)); // (scaled-cycles)
 
     DB_PRINT("Alarm set in %d ticks\n", ticks);
 
@@ -77,7 +81,8 @@ static void stm32f405_timer_set_alarm(STM32f405TimerState *s)
         timer_del(s->timer);
         stm32f405_timer_interrupt(s);
     } else {
-        timer_mod(s->timer, now + (int64_t) ticks);
+        // (scaled-cycles) + (scaled-cylces)
+        timer_mod(s->timer, ((now * (s->freq_hz / 1000)) / (s->tim_psc + 1)) + (int64_t) ticks);
         DB_PRINT("Wait Time: %" PRId64 " ticks\n", now +
                  (int64_t) ticks / s->freq_hz);
     }
@@ -107,7 +112,7 @@ static void stm32f405_timer_reset(DeviceState *dev)
     s->tim_dmar = 0;
     s->tim_or = 0;
 
-    s->tick_offset = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) / s->freq_hz;
+    s->tick_offset = qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL) * (s->freq_hz / 1000);
 }
 
 static uint64_t stm32f405_timer_read(void *opaque, hwaddr offset,
@@ -137,8 +142,11 @@ static uint64_t stm32f405_timer_read(void *opaque, hwaddr offset,
     case TIM_CCER:
         return s->tim_ccer;
     case TIM_CNT:
-        s->tim_cnt = s->tick_offset + (qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) /
-                                       s->freq_hz);
+        // (cycles) + (ms * (cycles/s * 1/1000)
+        // (cycles) + (ms * (cycles/ms)
+        // (cycles) + (cycles)
+        s->tim_cnt = s->tick_offset + (qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL) *
+                                       (s->freq_hz / 1000));
         return s->tim_cnt;
     case TIM_PSC:
         return s->tim_psc;
