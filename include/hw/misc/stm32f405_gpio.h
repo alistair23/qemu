@@ -60,7 +60,12 @@
 #define STM32F405_GPIO(obj) OBJECT_CHECK(Stm32f405GpioState, (obj), \
                            TYPE_STM32F405_GPIO)
 
-#define EXTERNAL_TCP_ACCESS 1
+/* WARNING: Using the GPIO external access makes QEMU slow and unstable.
+ * It is currently in alpha and constantly changing.
+ * Use at your own risk!
+ */
+
+#define EXTERNAL_TCP_ACCESS 0
 
 #if EXTERNAL_TCP_ACCESS
 /* TCP External Access to GPIO

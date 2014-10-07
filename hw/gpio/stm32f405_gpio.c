@@ -348,6 +348,11 @@ static void stm32f405_gpio_initfn(Object *obj)
      * This is based on the work by Biff Eros
      * https://sites.google.com/site/bifferboard/Home/howto/qemu
      */
+
+    DB_PRINT("WARNING: Using the GPIO external access makes QEMU slow " \
+              "and unstable. It is currently in alpha and constantly changing.\n" \
+              "Use at your own risk!\n\n");
+
     tcp_connection_open(&s->tcp_info);
     /* END TCP External Access to GPIO */
     #endif
