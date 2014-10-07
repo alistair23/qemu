@@ -21,7 +21,7 @@ class AlarmException(Exception):
     signal.signal(signal.SIGALRM, self.alarmHandler)
     signal.alarm(timeout)
     if self.dont_update == 1:
-      temp_prompt = ''
+      temp_prompt = '\n'
     else:
       temp_prompt = prompt
     try:
@@ -80,7 +80,8 @@ class Terminal(asynchat.async_chat):
       if m:
         reg, val = m.groups()
         reg = int(reg)
-        print "Write :: Address: ", reg, "Value: ", val
+        val = int(val)
+        print "Write :: Address: ", hex(reg), "Value: ", bin(val)
         if reg == 20:
           if self.data.startswith("GPIO W a "):
             self.pins_a = val
