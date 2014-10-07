@@ -109,7 +109,8 @@ static void stm32f405_timer_reset(DeviceState *dev)
     s->tim_dmar = 0;
     s->tim_or = 0;
 
-    s->tick_offset = qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL) * (s->freq_hz / 1000);
+    s->tick_offset = qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL) *
+                     (s->freq_hz / 1000);
 }
 
 static uint64_t stm32f405_timer_read(void *opaque, hwaddr offset,
