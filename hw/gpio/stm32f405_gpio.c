@@ -54,6 +54,42 @@ static void stm32f405_gpio_set_irq(void * opaque, int irq, int level)
  * This is based on the work by Biff Eros
  * https://sites.google.com/site/bifferboard/Home/howto/qemu
  */
+
+static void stm32f405_gpio_set_alarm(Stm32f405GpioState *s);
+static uint32_t gpio_pin_read(Stm32f405GpioState *s,
+                              char gpio_letter, hwaddr addr);
+
+static void stm32f405_gpio_interrupt(void *opaque)
+{
+    Stm32f405GpioState *s = opaque;
+
+    DB_PRINT("Interrupt\n");
+
+    /* Fake a read */
+    s->gpio_idr = gpio_pin_read(s, s->gpio_letter, GPIO_IDR);
+    stm32f405_gpio_set_alarm(s);
+}
+
+static void stm32f405_gpio_set_alarm(Stm32f405GpioState *s)
+{
+    uint32_t ticks;
+    int64_t now;
+
+    DB_PRINT("Alarm set\n");
+
+    now = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
+    ticks =  s->tick_offset + (now * 100000000) + 1;
+
+    DB_PRINT("Alarm set in %d ticks\n", ticks);
+
+    if (ticks == 0) {
+        timer_del(s->timer);
+        stm32f405_gpio_interrupt(s);
+    } else {
+        timer_mod(s->timer, now + (int64_t) ticks);
+    }
+}
+
 static int tcp_connection_open(gpio_tcp_connection* c)
 {
     struct sockaddr_in remote;
@@ -90,17 +126,20 @@ static void tcp_connection_command(gpio_tcp_connection* c, const char* command)
     }
 }
 
-
 static int tcp_connection_getpins(gpio_tcp_connection* c,
                                   const char* command, uint32_t* reg)
 {
     char str[100];
     fd_set rfds;
     int t, i;
+    struct timeval tv;
 
     rfds = c->fds;
 
-    if (select(c->socket + 1, &rfds, NULL, NULL, NULL) == -1) {
+    tv.tv_sec = 0;
+    tv.tv_usec = 50;
+
+    if (select(c->socket + 1, &rfds, NULL, NULL, &tv) == -1) {
         if (EINTR == errno) {
             return 0;
         }
@@ -124,6 +163,7 @@ static int tcp_connection_getpins(gpio_tcp_connection* c,
                 return sizeof(str);
             } else {
                 DB_PRINT("Invalid data recieved\n");
+                DB_PRINT("Expecting: %s\n", command);
             }
         } else {
             if (t < 0) {
@@ -149,7 +189,6 @@ static void gpio_pin_write(gpio_tcp_connection* c, char gpio_letter,
             addr, reg);
     tcp_connection_command(c, command);
 }
-
 
 static uint32_t gpio_pin_read(Stm32f405GpioState *s,
                               char gpio_letter, hwaddr addr)
@@ -207,6 +246,10 @@ static void stm32f405_gpio_reset(DeviceState *dev)
     s->gpio_afrl = 0x00000000;
     s->gpio_afrh = 0x00000000;
     s->gpio_direction = 0x0000;
+
+#if EXTERNAL_TCP_ACCESS
+    s->tick_offset = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
+#endif
 }
 
 static uint64_t stm32f405_gpio_read(void *opaque, hwaddr offset,
@@ -354,6 +397,8 @@ static void stm32f405_gpio_initfn(Object *obj)
               "Use at your own risk!\n\n");
 
     tcp_connection_open(&s->tcp_info);
+    s->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, stm32f405_gpio_interrupt, s);
+    stm32f405_gpio_set_alarm(s);
     /* END TCP External Access to GPIO */
     #endif
 }

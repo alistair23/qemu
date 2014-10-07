@@ -115,6 +115,9 @@ typedef struct Stm32f405GpioState {
      * https://sites.google.com/site/bifferboard/Home/howto/qemu
      */
      gpio_tcp_connection tcp_info;
+
+     QEMUTimer *timer;
+     uint32_t tick_offset;
      /* END TCP External Access to GPIO */
      #endif
 } Stm32f405GpioState;
