@@ -118,6 +118,7 @@ typedef struct Stm32f405GpioState {
 
      QEMUTimer *timer;
      uint32_t tick_offset;
+     uint32_t prev_out;
      /* END TCP External Access to GPIO */
      #endif
 } Stm32f405GpioState;

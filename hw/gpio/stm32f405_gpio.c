@@ -42,11 +42,11 @@ static void stm32f405_gpio_set_irq(void * opaque, int irq, int level)
 {
     Stm32f405GpioState *s = (Stm32f405GpioState *)opaque;
 
-    DB_PRINT("Line: %d Level: %d\n", irq, !!((!!level << irq) & (0xFFFF ^ s->gpio_direction)));
+    DB_PRINT("Line: %d Level: %d\n", irq, !!((!!level << irq) & s->gpio_direction));
 
     s->gpio_odr |= level << irq;
 
-    qemu_set_irq(s->gpio_out[irq], !!((!!level << irq) & (0xFFFF ^ s->gpio_direction)));
+    qemu_set_irq(s->gpio_out[irq], !!((!!level << irq) & s->gpio_direction));
 }
 
 #if EXTERNAL_TCP_ACCESS
@@ -63,7 +63,7 @@ static void stm32f405_gpio_interrupt(void *opaque)
 {
     Stm32f405GpioState *s = opaque;
 
-    DB_PRINT("Interrupt\n");
+    DB_PRINT("Fakeing a read\n");
 
     /* Fake a read */
     s->gpio_idr = gpio_pin_read(s, s->gpio_letter, GPIO_IDR);
@@ -75,12 +75,10 @@ static void stm32f405_gpio_set_alarm(Stm32f405GpioState *s)
     uint32_t ticks;
     int64_t now;
 
-    DB_PRINT("Alarm set\n");
+    DB_PRINT("Alarm set: %c\n", s->gpio_letter);
 
     now = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
-    ticks =  s->tick_offset + (now * 100000000) + 1;
-
-    DB_PRINT("Alarm set in %d ticks\n", ticks);
+    ticks =  s->tick_offset + (now / 10) + 10000000ULL;
 
     if (ticks == 0) {
         timer_del(s->timer);
@@ -132,14 +130,10 @@ static int tcp_connection_getpins(gpio_tcp_connection* c,
     char str[100];
     fd_set rfds;
     int t, i;
-    struct timeval tv;
 
     rfds = c->fds;
 
-    tv.tv_sec = 0;
-    tv.tv_usec = 50;
-
-    if (select(c->socket + 1, &rfds, NULL, NULL, &tv) == -1) {
+    if (select(c->socket + 1, &rfds, NULL, NULL, NULL) == -1) {
         if (EINTR == errno) {
             return 0;
         }
@@ -153,12 +147,13 @@ static int tcp_connection_getpins(gpio_tcp_connection* c,
             str[t] = '\0';
             DB_PRINT("Input String: %s\n", str);
             if (strncmp(str, command, strlen(command)) == 0) {
+                *reg = 0;
                 for (i = 0; i < strlen(str); i++) {
                     if (str[i] == '1') {
                         *reg |= (1 << i);
                     }
                 }
-                *reg = *reg >> 16;
+                *reg = *reg >> 9;
                 DB_PRINT("Reg is: 0x%x\n", *reg);
                 return sizeof(str);
             } else {
@@ -168,17 +163,14 @@ static int tcp_connection_getpins(gpio_tcp_connection* c,
         } else {
             if (t < 0) {
                 perror("recv");
-            }
-            else {
+            } else {
                 DB_PRINT("Connection closed\n");
             }
             exit(1);
         }
     }
-
     return 0;
 }
-
 
 static void gpio_pin_write(gpio_tcp_connection* c, char gpio_letter,
                            hwaddr addr, uint32_t reg)
@@ -195,28 +187,39 @@ static uint32_t gpio_pin_read(Stm32f405GpioState *s,
 {
     gpio_tcp_connection c = s->tcp_info;
     char command[100];
-    int i, len = 1;
+    int i, mask;
     /* Assume all values are low by default */
     uint32_t out = 0x00000000;
     uint32_t changes;
-    static uint32_t prev_out = 0x00000000;
 
     sprintf(command, "GPIO R %c %" HWADDR_PRId "\r\n", gpio_letter, addr);
     tcp_connection_command(&c, command);
 
     sprintf(command, "GPIO R %c ", gpio_letter);
-    while (len) {
-        len = tcp_connection_getpins(&c, command, &out);
+
+    tcp_connection_getpins(&c, command, &out);
+
+    for (i = 0; i < 16; i++) {
+        /* Two bits determine the I/O direction/mode */
+        mask = 3U << (i * 2);
+
+        if ((s->gpio_moder & mask) == GPIO_MODER_INPUT) {
+            s->gpio_direction |= (1 << i);
+        } else if ((s->gpio_moder & mask) == GPIO_MODER_GENERAL_OUT) {
+            s->gpio_direction &= (0xFFFF ^ (1 << i));
+        } else {
+            /* Not supported at the moment */
+        }
     }
 
-    changes = out ^ prev_out;
+    changes = out ^ s->prev_out;
     for (i = 0; i < 16; i++) {
         if (changes & (1 << i)) {
             DB_PRINT("Out: 0x%x; Changes: 0x%x\n", out, changes);
             stm32f405_gpio_set_irq(s, i, out & (1 << i));
         }
     }
-    prev_out = out;
+    s->prev_out = out;
     return out;
 }
 /* END TCP External Access to GPIO */
@@ -251,6 +254,7 @@ static void stm32f405_gpio_reset(DeviceState *dev)
 
 #if EXTERNAL_TCP_ACCESS
     s->tick_offset = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
+    s->prev_out = 0x00000000;
 #endif
 }
 
