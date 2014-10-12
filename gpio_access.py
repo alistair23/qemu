@@ -4,6 +4,7 @@ import asyncore, asynchat
 import os, socket, string, sys
 import re
 import signal
+import threading
 
 PIN_COUNT = 16
 GPIO_HOST = "localhost"
@@ -17,7 +18,7 @@ class AlarmException(Exception):
     self.dont_update = 1
     raise AlarmException
 
-  def nonBlockingRawInput(self, prompt='', timeout=10):
+  def nonBlockingRawInput(self, prompt='', timeout=5):
     signal.signal(signal.SIGALRM, self.alarmHandler)
     signal.alarm(timeout)
     if self.dont_update == 1:
@@ -34,7 +35,7 @@ class AlarmException(Exception):
     return ''
 
 class Terminal(asynchat.async_chat):
-  def __init__(self, sock, server):
+  def __init__(self, sock, server, pins_a, pins_b, pins_c, pins_d, pins_e, pins_f):
     asynchat.async_chat.__init__(self,sock)
     self.set_terminator("\r\n")
     self.header = None
@@ -47,29 +48,12 @@ class Terminal(asynchat.async_chat):
     self.wmatch = re.compile(r"GPIO W . (\d{1,5}) (\d{1,5})")
     self.rmatch = re.compile(r"GPIO R . (\d{1,5})")
 
-    self.pins_a = self.GetDefaultPins()
-    self.pins_b = self.GetDefaultPins()
-    self.pins_c = self.GetDefaultPins()
-    self.pins_d = self.GetDefaultPins()
-    self.pins_e = self.GetDefaultPins()
-    self.pins_f = self.GetDefaultPins()
-
-  def read_exec_command(self, prompt):
-    a = AlarmException()
-    cmdline = a.nonBlockingRawInput(prompt=prompt)
-
-    self.execute_cmd(cmdline)
-
-  def execute_cmd(self, cmd):
-    if cmd.startswith("GPIO S "):
-      print "Set   :: ", repr(cmd)
-      print "Unimplemented - Coming Soon"
-      # To do - Use this to set the value of the server regs
-      # DO NOT push the command
-    elif cmd == '':
-      return
-    else:
-      print "Received invalid command", repr(cmd)
+    self.pins_a = pins_a
+    self.pins_b = pins_b
+    self.pins_c = pins_c
+    self.pins_d = pins_d
+    self.pins_e = pins_e
+    self.pins_f = pins_f
 
   def collect_incoming_data(self, data):
     self.data = self.data + data
@@ -80,21 +64,27 @@ class Terminal(asynchat.async_chat):
       if m:
         reg, val = m.groups()
         reg = int(reg)
-        val = int(val)
-        print "Write :: Address: ", hex(reg), "Value: ", bin(val)
+        val = bin(int(val))
+        print "Write :: Address: ", hex(reg), "Value: ", val
         if reg == 20:
           if self.data.startswith("GPIO W a "):
-            self.pins_a = val
+            for i in xrange(0, len(val) - 2):
+              self.pins_a[-(i + 1)] = val[i + 2]
           elif self.data.startswith("GPIO W b "):
-            self.pins_b = val
+            for i in xrange(0, len(val) - 2):
+              self.pins_b[-(i + 1)] = val[i + 2]
           elif self.data.startswith("GPIO W c "):
-            self.pins_c = val
+            for i in xrange(0, len(val) - 2):
+              self.pins_c[-(i + 1)] = val[i + 2]
           elif self.data.startswith("GPIO W d "):
-            self.pins_d = val
+            for i in xrange(0, len(val) - 2):
+              self.pins_d[-(i + 1)] = val[i + 2]
           elif self.data.startswith("GPIO W e "):
-            self.pins_e = val
+            for i in xrange(0, len(val) - 2):
+              self.pins_e[-(i + 1)] = val[i + 2]
           elif self.data.startswith("GPIO W f "):
-            self.pins_f = val
+            for i in xrange(0, len(val) - 2):
+              self.pins_f[-(i + 1)] = val[i + 2]
     elif self.data.startswith("GPIO R "):
       m = self.rmatch.match(self.data)
       if m:
@@ -102,7 +92,7 @@ class Terminal(asynchat.async_chat):
          if s.isdigit():
           reg_string = s
           reg = int(s)
-        print "Read  :: Address: ", reg
+        #print "Read  :: Address: ", reg
         if reg == 16:
           if self.data.startswith("GPIO R a "):
             self.push('GPIO R a '+''.join(map(str, self.pins_a)))
@@ -116,6 +106,9 @@ class Terminal(asynchat.async_chat):
             self.push('GPIO R e '+''.join(map(str, self.pins_e)))
           elif self.data.startswith("GPIO R f "):
             self.push('GPIO R f '+''.join(map(str, self.pins_f)))
+          else:
+            # Unsupported GPIO device
+            self.push('Unsupported')
     else:
       print "Received invalid command", repr(self.data)
     self.data = ""
@@ -125,13 +118,6 @@ class Terminal(asynchat.async_chat):
     del self.server.clients[self.socket.fileno()]
     self.close()
 
-  def GetDefaultPins(self):
-    pins = []
-    # Default all pins to 0
-    for i in xrange(0, PIN_COUNT):
-      pins.append('1')
-    return pins
-
 
 class Server(asyncore.dispatcher):
   def __init__(self):
@@ -140,23 +126,86 @@ class Server(asyncore.dispatcher):
     self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
     self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
     self.bind(("", self.port))
-    self.listen(8)
+    self.listen(1)
     self.clients = {}
 
+    self.smatch = re.compile(r"GPIO S . (\d{1,5}) (\d{1,5})")
+
+    self.pins_a = self.GetDefaultPins()
+    self.pins_b = self.GetDefaultPins()
+    self.pins_c = self.GetDefaultPins()
+    self.pins_d = self.GetDefaultPins()
+    self.pins_e = self.GetDefaultPins()
+    self.pins_f = self.GetDefaultPins()
+
+    self.num_clients = 0
+
   def handle_accept(self):
+    print "Accepting Connection"
+    self.num_clients = self.num_clients + 1
     conn, addr = self.accept()
-    t = Terminal(conn, self)
-    t.read_exec_command('(Netduio Plus 2) ')
+    t = Terminal(conn, self, self.pins_a, self.pins_b, self.pins_c, self.pins_d, self.pins_e, self.pins_f)
+
+  def read_exec_command(self, prompt):
+    a = AlarmException()
+    cmdline = a.nonBlockingRawInput(prompt=prompt)
+
+    self.execute_cmd(cmdline)
+
+  def execute_cmd(self, cmd):
+    if cmd.startswith("GPIO S "):
+      m = self.smatch.match(cmd)
+      if m:
+        reg, val = m.groups()
+        reg = int(reg)
+        val = bin(int(val))
+        print "Set   :: Address: ", hex(reg), "Value: ", val
+        if int(reg) == 16:
+          if cmd.startswith("GPIO S a "):
+            for i in xrange(0, len(val) - 2):
+              self.pins_a[-(i + 1)] = val[i + 2]
+          elif cmd.startswith("GPIO S b "):
+            for i in xrange(0, len(val) - 2):
+              self.pins_b[-(i + 1)] = val[i + 2]
+          elif cmd.startswith("GPIO S c "):
+            for i in xrange(0, len(val) - 2):
+              self.pins_c[-(i + 1)] = val[i + 2]
+          elif cmd.startswith("GPIO S d "):
+            for i in xrange(0, len(val) - 2):
+              self.pins_d[-(i + 1)] = val[i + 2]
+          elif cmd.startswith("GPIO S e "):
+            for i in xrange(0, len(val) - 2):
+              self.pins_e[-(i + 1)] = val[i + 2]
+          elif cmd.startswith("GPIO S f "):
+            for i in xrange(0, len(val) - 2):
+              self.pins_f[-(i + 1)] = val[i + 2]
+    elif cmd == '':
+      return
+    else:
+      print "Received invalid command", repr(cmd)
+
+  def handle_close(self):
+    self.close()
+
+  def GetDefaultPins(self):
+    print "Setting Pins"
+    pins = []
+    # Default all pins to 0
+    for i in xrange(0, PIN_COUNT):
+      pins.append('0')
+    return pins
 
 
 def main():
   s = Server()
 
   print "Serving access to GPIO Panel"
+  thread = threading.Thread(target=asyncore.loop)
+  thread.start()
   while True:
     #if Terminal.read_exec_command(t, '(Netduio Plus 2) '):
     #  s.qemu_channel.push('0')
-    asyncore.loop()
+    s.read_exec_command('(Netduio Plus 2) ')
 
 if __name__ == "__main__":
 
