@@ -67,19 +67,19 @@ static void stm32f405_syscfg_set_irq(void * opaque, int irq, int level)
             }
             break;
         case 1:
-            if ((s->syscfg_exticr1 & 0xF0) == config) {
+            if (((s->syscfg_exticr1 & 0xF0) >> 4) == config) {
                 qemu_set_irq(s->gpio_out[1], level);
                 DB_PRINT("Pulse EXTI: 1\n");
             }
             break;
         case 2:
-            if ((s->syscfg_exticr1 & 0xF00) == config) {
+            if (((s->syscfg_exticr1 & 0xF00) >> 8) == config) {
                 qemu_set_irq(s->gpio_out[2], level);
                 DB_PRINT("Pulse EXTI: 2\n");
             }
             break;
         case 3:
-            if ((s->syscfg_exticr1 & 0xF000) == config) {
+            if (((s->syscfg_exticr1 & 0xF000) >> 12) == config) {
                 qemu_set_irq(s->gpio_out[3], level);
                 DB_PRINT("Pulse EXTI: 3\n");
             }
@@ -91,19 +91,19 @@ static void stm32f405_syscfg_set_irq(void * opaque, int irq, int level)
             }
             break;
         case 5:
-            if ((s->syscfg_exticr2 & 0xF0) == config) {
+            if (((s->syscfg_exticr2 & 0xF0) >> 4) == config) {
                 qemu_set_irq(s->gpio_out[5], level);
                 DB_PRINT("Pulse EXTI: 5\n");
             }
             break;
         case 6:
-            if ((s->syscfg_exticr2 & 0xF00) == config) {
+            if (((s->syscfg_exticr2 & 0xF00) >> 8) == config) {
                 qemu_set_irq(s->gpio_out[6], level);
                 DB_PRINT("Pulse EXTI: 6\n");
             }
             break;
         case 7:
-            if ((s->syscfg_exticr2 & 0xF000) == config) {
+            if (((s->syscfg_exticr2 & 0xF000) >> 12) == config) {
                 qemu_set_irq(s->gpio_out[7], level);
                 DB_PRINT("Pulse EXTI: 7\n");
             }
@@ -115,19 +115,19 @@ static void stm32f405_syscfg_set_irq(void * opaque, int irq, int level)
             }
             break;
         case 9:
-            if ((s->syscfg_exticr3 & 0xF0) == config) {
+            if (((s->syscfg_exticr3 & 0xF0) >> 4) == config) {
                 qemu_set_irq(s->gpio_out[9], level);
                 DB_PRINT("Pulse EXTI: 9\n");
             }
             break;
         case 10:
-            if ((s->syscfg_exticr3 & 0xF00) == config) {
+            if (((s->syscfg_exticr3 & 0xF00) >> 8) == config) {
                 qemu_set_irq(s->gpio_out[10], level);
                 DB_PRINT("Pulse EXTI: 10\n");
             }
             break;
         case 11:
-            if ((s->syscfg_exticr3 & 0xF000) == config) {
+            if (((s->syscfg_exticr3 & 0xF000) >> 12) == config) {
                 qemu_set_irq(s->gpio_out[11], level);
                 DB_PRINT("Pulse EXTI: 11\n");
             }
@@ -139,19 +139,19 @@ static void stm32f405_syscfg_set_irq(void * opaque, int irq, int level)
             }
             break;
         case 13:
-            if ((s->syscfg_exticr4 & 0xF0) == config) {
+            if (((s->syscfg_exticr4 & 0xF0) >> 4) == config) {
                 qemu_set_irq(s->gpio_out[13], level);
                 DB_PRINT("Pulse EXTI: 13\n");
             }
             break;
         case 14:
-            if ((s->syscfg_exticr4 & 0xF00) == config) {
+            if (((s->syscfg_exticr4 & 0xF00) >> 8) == config) {
                 qemu_set_irq(s->gpio_out[14], level);
                 DB_PRINT("Pulse EXTI: 14\n");
             }
             break;
         case 15:
-            if ((s->syscfg_exticr4 & 0xF000) == config) {
+            if (((s->syscfg_exticr4 & 0xF000) >> 12) == config) {
                 qemu_set_irq(s->gpio_out[15], level);
                 DB_PRINT("Pulse EXTI: 15\n");
             }
