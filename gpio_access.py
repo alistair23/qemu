@@ -162,21 +162,39 @@ class Server(asyncore.dispatcher):
         print "Set   :: Address: ", hex(reg), "Value: ", val
         if int(reg) == 16:
           if cmd.startswith("GPIO S a "):
+            for i in xrange(0, PIN_COUNT):
+              self.pins_a[i] = 0
+
             for i in xrange(0, len(val) - 2):
               self.pins_a[-(i + 1)] = val[i + 2]
           elif cmd.startswith("GPIO S b "):
+            for i in xrange(0, PIN_COUNT):
+              self.pins_b[i] = 0
+
             for i in xrange(0, len(val) - 2):
               self.pins_b[-(i + 1)] = val[i + 2]
           elif cmd.startswith("GPIO S c "):
+            for i in xrange(0, PIN_COUNT):
+              self.pins_c[i] = 0
+
             for i in xrange(0, len(val) - 2):
               self.pins_c[-(i + 1)] = val[i + 2]
           elif cmd.startswith("GPIO S d "):
+            for i in xrange(0, PIN_COUNT):
+              self.pins_d[i] = 0
+
             for i in xrange(0, len(val) - 2):
               self.pins_d[-(i + 1)] = val[i + 2]
           elif cmd.startswith("GPIO S e "):
+            for i in xrange(0, PIN_COUNT):
+              self.pins_e[i] = 0
+
             for i in xrange(0, len(val) - 2):
               self.pins_e[-(i + 1)] = val[i + 2]
           elif cmd.startswith("GPIO S f "):
+            for i in xrange(0, PIN_COUNT):
+              self.pins_f[i] = 0
+
             for i in xrange(0, len(val) - 2):
               self.pins_f[-(i + 1)] = val[i + 2]
     elif cmd == '':
