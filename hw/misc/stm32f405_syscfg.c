@@ -53,8 +53,8 @@ static void stm32f405_syscfg_set_irq(void * opaque, int irq, int level)
 {
     STM32f405SyscfgState *s = opaque;
 
-    DB_PRINT("Interupt: GPIO: %d, Line: %d; Level: %d\n", irq / 15,
-             irq % 15, level);
+    DB_PRINT("Interupt: GPIO: %d, Line: %d; Level: %d\n", irq / 16,
+             irq % 16, level);
 
     if (s->syscfg_exticr1 & 0xFF) {
         qemu_irq_pulse(s->gpio_out[0]);
