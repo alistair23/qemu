@@ -386,7 +386,7 @@ static void stm32f405_gpio_initfn(Object *obj)
     Stm32f405GpioState *s = STM32F405_GPIO(obj);
 
     memory_region_init_io(&s->iomem, obj, &stm32f405_gpio_ops, s,
-                          "stm32f405_gpio", 0x2000);
+                          "stm32f405_gpio", 0x1000);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->iomem);
 
     qdev_init_gpio_in(DEVICE(obj), stm32f405_gpio_set_irq, 16);

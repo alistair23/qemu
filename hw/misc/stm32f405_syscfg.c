@@ -243,7 +243,7 @@ static void stm32f405_syscfg_init(Object *obj)
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
     memory_region_init_io(&s->mmio, obj, &stm32f405_syscfg_ops, s,
-                          TYPE_STM32F405_SYSCFG, 0x2000);
+                          TYPE_STM32F405_SYSCFG, 0x1000);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->mmio);
 
     qdev_init_gpio_in(DEVICE(obj), stm32f405_syscfg_set_irq, 16 * 9);
