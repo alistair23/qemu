@@ -57,6 +57,7 @@ static void stm32f405_timer_interrupt(void *opaque)
         /* PWM 2 - Mode 1 */
         fprintf(stderr, "%s: Duty Cycle: %d%%\n", __func__,
                 s->tim_ccr2 / (100 * (s->tim_psc + 1)));
+        stm32f405_timer_set_alarm(s);
     }
 
     if (s->tim_ccmr2 & (TIM_CCMR2_OC4M2 + TIM_CCMR2_OC4M1) &&
@@ -65,6 +66,12 @@ static void stm32f405_timer_interrupt(void *opaque)
         s->tim_ccer & TIM_CCER_CC4E) {
         fprintf(stderr, "Pan Angle: %d\n",
                 (int) (((s->tim_ccr4 * 2) - 500) / 11.11) - 90);
+        if ((int) (((s->tim_ccr4 * 2) - 500) / 11.11) - 90 > 85 ||
+            (int) (((s->tim_ccr4 * 2) - 500) / 11.11) - 90 < -85) {
+            fprintf(stderr, "CAUTION: The pan angle is outside of the safe " \
+                "region\n");
+        }
+        stm32f405_timer_set_alarm(s);
     }
 
     if (s->tim_ccmr2 & (TIM_CCMR2_OC3M2 + TIM_CCMR2_OC3M1) &&
@@ -73,6 +80,12 @@ static void stm32f405_timer_interrupt(void *opaque)
         s->tim_ccer & TIM_CCER_CC3E) {
         fprintf(stderr, "Tilt Angle: %d\n",
                 (((s->tim_ccr3 * 2) - 500) / 10) - 90);
+        if ((int) (((s->tim_ccr3 * 2) - 500) / 10) - 90 > 85 ||
+            (int) (((s->tim_ccr3 * 2) - 500) / 10) - 90 < -85) {
+            fprintf(stderr, "CAUTION: The title angle is outside of the safe " \
+                "region\n");
+        }
+        stm32f405_timer_set_alarm(s);
     }
 }
 
