@@ -54,10 +54,23 @@
 #define TIM_EGR_UG 1
 
 #define TIM_CCER_CC2E   (1 << 4)
+#define TIM_CCER_CC3E   (1 << 8)
+#define TIM_CCER_CC4E   (1 << 12)
+
 #define TIM_CCMR1_OC2M2 (1 << 14)
 #define TIM_CCMR1_OC2M1 (1 << 13)
 #define TIM_CCMR1_OC2M0 (1 << 12)
 #define TIM_CCMR1_OC2PE (1 << 11)
+
+#define TIM_CCMR2_OC3M2 (1 << 6)
+#define TIM_CCMR2_OC3M1 (1 << 5)
+#define TIM_CCMR2_OC3M0 (1 << 4)
+#define TIM_CCMR2_OC3PE (1 << 3)
+
+#define TIM_CCMR2_OC4M2 (1 << 14)
+#define TIM_CCMR2_OC4M1 (1 << 13)
+#define TIM_CCMR2_OC4M0 (1 << 12)
+#define TIM_CCMR2_OC4PE (1 << 11)
 
 #define TIM_DIER_UIE  1
 

@@ -58,6 +58,22 @@ static void stm32f405_timer_interrupt(void *opaque)
         fprintf(stderr, "%s: Duty Cycle: %d%%\n", __func__,
                 s->tim_ccr2 / (100 * (s->tim_psc + 1)));
     }
+
+    if (s->tim_ccmr2 & (TIM_CCMR2_OC4M2 + TIM_CCMR2_OC4M1) &&
+        !(s->tim_ccmr2 & TIM_CCMR2_OC4M0) &&
+        (s->tim_ccmr2 & TIM_CCMR2_OC4PE) &&
+        s->tim_ccer & TIM_CCER_CC4E) {
+        fprintf(stderr, "Pan Angle: %d\n",
+                (int) (((s->tim_ccr4 * 2) - 500) / 11.11) - 90);
+    }
+
+    if (s->tim_ccmr2 & (TIM_CCMR2_OC3M2 + TIM_CCMR2_OC3M1) &&
+        !(s->tim_ccmr2 & TIM_CCMR2_OC3M0) &&
+        (s->tim_ccmr2 & TIM_CCMR2_OC3PE) &&
+        s->tim_ccer & TIM_CCER_CC3E) {
+        fprintf(stderr, "Tilt Angle: %d\n",
+                (((s->tim_ccr3 * 2) - 500) / 10) - 90);
+    }
 }
 
 static void stm32f405_timer_set_alarm(STM32f405TimerState *s)
