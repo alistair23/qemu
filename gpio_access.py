@@ -165,38 +165,56 @@ class Server(asyncore.dispatcher):
             for i in xrange(0, PIN_COUNT):
               self.pins_a[i] = 0
 
-            for i in xrange(0, len(val) - 2):
-              self.pins_a[-(i + 1)] = val[i + 2]
+            for i in xrange(0, PIN_COUNT):
+              if val[-i] == 'b':
+                break
+              self.pins_a[-i] = val[-i]
+
           elif cmd.startswith("GPIO S b "):
             for i in xrange(0, PIN_COUNT):
               self.pins_b[i] = 0
 
-            for i in xrange(0, len(val) - 2):
-              self.pins_b[-(i + 1)] = val[i + 2]
+            for i in xrange(0, PIN_COUNT):
+              if val[-i] == 'b':
+                break
+              self.pins_b[-i] = val[-i]
+
           elif cmd.startswith("GPIO S c "):
             for i in xrange(0, PIN_COUNT):
               self.pins_c[i] = 0
 
-            for i in xrange(0, len(val) - 2):
-              self.pins_c[-(i + 1)] = val[i + 2]
+            for i in xrange(0, PIN_COUNT):
+              if val[-i] == 'b':
+                break
+              self.pins_c[-i] = val[-i]
+
           elif cmd.startswith("GPIO S d "):
             for i in xrange(0, PIN_COUNT):
               self.pins_d[i] = 0
 
-            for i in xrange(0, len(val) - 2):
-              self.pins_d[-(i + 1)] = val[i + 2]
+            for i in xrange(0, PIN_COUNT):
+              if val[-i] == 'b':
+                break
+              self.pins_d[-i] = val[-i]
+
           elif cmd.startswith("GPIO S e "):
             for i in xrange(0, PIN_COUNT):
               self.pins_e[i] = 0
 
-            for i in xrange(0, len(val) - 2):
-              self.pins_e[-(i + 1)] = val[i + 2]
+            for i in xrange(0, PIN_COUNT):
+              if val[-i] == 'b':
+                break
+              self.pins_e[-i] = val[-i]
+
           elif cmd.startswith("GPIO S f "):
             for i in xrange(0, PIN_COUNT):
               self.pins_f[i] = 0
 
-            for i in xrange(0, len(val) - 2):
-              self.pins_f[-(i + 1)] = val[i + 2]
+            for i in xrange(0, PIN_COUNT):
+              if val[-i] == 'b':
+                break
+              self.pins_f[-i] = val[-i]
+
     elif cmd == '':
       return
     else:
