@@ -210,7 +210,7 @@ static void netduinoplus2_init(MachineState *machine)
     qdev_init_nofail(dev);
     busdev = SYS_BUS_DEVICE(dev);
     sysbus_mmio_map(busdev, 0, 0x40013C00);
-    for (i = 0; i < 16; ++i) {
+    for (i = 0; i < 16; i++) {
         sysbus_connect_irq(busdev, i, pic[exti_irq[i]]);
     }
     for (j = 0; j < 16; j++) {

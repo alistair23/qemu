@@ -149,11 +149,14 @@ static int tcp_connection_getpins(gpio_tcp_connection* c,
             if (strncmp(str, command, strlen(command)) == 0) {
                 *reg = 0;
                 for (i = 0; i < strlen(str); i++) {
-                    if (str[i] == '1') {
-                        *reg |= (1 << i);
+                    if (str[i + 9] == '\0') {
+                        break;
+                    }
+
+                    if (str[i + 9] == '1') {
+                        *reg |= (1 << (15 - i));
                     }
                 }
-                *reg = *reg >> 9;
                 DB_PRINT("Reg is: 0x%x\n", *reg);
                 return sizeof(str);
             } else {
