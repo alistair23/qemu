@@ -85,7 +85,10 @@ static void stm32f405_exti_set_irq(void * opaque, int irq, int level)
     DB_PRINT("Set EXTI: %d to %d\n", irq, level);
     fprintf(stderr, "Set EXTI: %d to %d\n", irq, level);
 
-    qemu_set_irq(s->irq[irq], level);
+    if (level) {
+        qemu_irq_pulse(s->irq[irq]);
+        s->exti_pr |= 1 << irq;
+    }
 }
 
 static uint64_t stm32f405_exti_read(void *opaque, hwaddr addr,
@@ -141,7 +144,8 @@ static void stm32f405_exti_write(void *opaque, hwaddr addr,
         s->exti_swier = value;
         return;
     case EXTI_PR:
-        s->exti_pr = value;
+        /* This bit is cleared by writing a 1 to it */
+        s->exti_pr &= ~value;
         return;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
@@ -162,7 +166,7 @@ static void stm32f405_exti_init(Object *obj)
 
     s->irq = g_new0(qemu_irq, NUM_INTERRUPT_OUT_LINES);
     for (i = 0; i < NUM_INTERRUPT_OUT_LINES; i++) {
-        sysbus_init_irq(SYS_BUS_DEVICE(obj), s->irq);
+        sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq[i]);
     }
 
     memory_region_init_io(&s->mmio, obj, &stm32f405_exti_ops, s,
