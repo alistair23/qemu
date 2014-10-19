@@ -83,7 +83,6 @@ static void stm32f405_exti_set_irq(void * opaque, int irq, int level)
     STM32f405ExtiState *s = opaque;
 
     DB_PRINT("Set EXTI: %d to %d\n", irq, level);
-    fprintf(stderr, "Set EXTI: %d to %d\n", irq, level);
 
     if (level) {
         qemu_irq_pulse(s->irq[irq]);
