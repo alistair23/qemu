@@ -34,7 +34,7 @@ class AlarmException(Exception):
     signal.signal(signal.SIGALRM, signal.SIG_IGN)
     return ''
 
-class Terminal(asynchat.async_chat):
+class Server(asynchat.async_chat):
   def __init__(self, sock, server, pins_a, pins_b, pins_c, pins_d, pins_e, pins_f):
     asynchat.async_chat.__init__(self,sock)
     self.set_terminator("\r\n")
@@ -119,7 +119,7 @@ class Terminal(asynchat.async_chat):
     self.close()
 
 
-class Server(asyncore.dispatcher):
+class Connection(asyncore.dispatcher):
   def __init__(self):
     asyncore.dispatcher.__init__(self)
     self.port = GPIO_PORT
@@ -144,7 +144,7 @@ class Server(asyncore.dispatcher):
     print "Accepting Connection"
     self.num_clients = self.num_clients + 1
     conn, addr = self.accept()
-    t = Terminal(conn, self, self.pins_a, self.pins_b, self.pins_c, self.pins_d, self.pins_e, self.pins_f)
+    t = Server(conn, self, self.pins_a, self.pins_b, self.pins_c, self.pins_d, self.pins_e, self.pins_f)
 
   def read_exec_command(self, prompt):
     a = AlarmException()
@@ -233,7 +233,7 @@ class Server(asyncore.dispatcher):
 
 
 def main():
-  s = Server()
+  s = Connection()
 
   print "Serving access to GPIO Panel"
   thread = threading.Thread(target=asyncore.loop)
