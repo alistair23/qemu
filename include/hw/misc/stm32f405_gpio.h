@@ -24,21 +24,6 @@
 
 #include "hw/sysbus.h"
 
-/* TCP External Access to GPIO
- * This is based on the work by Biff Eros
- * https://sites.google.com/site/bifferboard/Home/howto/qemu
- */
-#include <stdio.h>
-#include <stdlib.h>
-#include <memory.h>
-#include <errno.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-/* END TCP External Access to GPIO */
-
 #define GPIO_MODER     0x00
 #define GPIO_OTYPER    0x04
 #define GPIO_OSPEEDR   0x08
@@ -72,6 +57,13 @@
  * This is based on the work by Biff Eros
  * https://sites.google.com/site/bifferboard/Home/howto/qemu
  */
+#include <stdlib.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+
 #define GPIO_PINS 16
 #define PANEL_PORT 4321
 
