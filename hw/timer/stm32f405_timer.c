@@ -95,6 +95,8 @@ static void stm32f405_timer_set_alarm(STM32f405TimerState *s);
 static void stm32f405_timer_interrupt(void *opaque)
 {
     STM32f405TimerState *s = opaque;
+    int pwm_pan_angle;
+    int pwm_tilt_angle;
 
     DB_PRINT("Interrupt\n");
 
@@ -109,7 +111,7 @@ static void stm32f405_timer_interrupt(void *opaque)
         (s->tim_ccmr1 & TIM_CCMR1_OC2PE) &&
         s->tim_ccer & TIM_CCER_CC2E) {
         /* PWM 2 - Mode 1 */
-        fprintf(stderr, "%s: Duty Cycle: %d%%\n", __func__,
+        DB_PRINT("Duty Cycle: %d%%\n",
                 s->tim_ccr2 / (100 * (s->tim_psc + 1)));
         stm32f405_timer_set_alarm(s);
     }
@@ -118,16 +120,18 @@ static void stm32f405_timer_interrupt(void *opaque)
         !(s->tim_ccmr2 & TIM_CCMR2_OC4M0) &&
         (s->tim_ccmr2 & TIM_CCMR2_OC4PE) &&
         s->tim_ccer & TIM_CCER_CC4E) {
-        fprintf(stderr, "Pan Angle: %d\n",
-                (int) (((s->tim_ccr4 * 2) - 500) / 11.11) - 90);
+        pwm_pan_angle = (int) (((s->tim_ccr4 * 2) - 500) / 11.11) - 90;
+        DB_PRINT("Pan Angle: %d\n", pwm_pan_angle);
 
-#if EXTERNAL_TCP_ACCESS
-        gpio_pin_write(&s->tcp_info, "Pan", (int) (((s->tim_ccr4 * 2) - 500) / 11.11) - 90);
-#endif
+    #if EXTERNAL_TCP_ACCESS
+        if (s->prev_pwm_pan_angle != pwm_pan_angle) {
+            gpio_pin_write(&s->tcp_info, "Pan", pwm_pan_angle);
+            s->prev_pwm_pan_angle = pwm_pan_angle;
+        }
+    #endif
 
-        if ((int) (((s->tim_ccr4 * 2) - 500) / 11.11) - 90 > 85 ||
-            (int) (((s->tim_ccr4 * 2) - 500) / 11.11) - 90 < -85) {
-            fprintf(stderr, "CAUTION: The pan angle is outside of the safe " \
+        if (pwm_pan_angle > 85 || pwm_pan_angle < -85) {
+            DB_PRINT("CAUTION: The pan angle is outside of the safe " \
                 "region\n");
         }
         stm32f405_timer_set_alarm(s);
@@ -137,16 +141,18 @@ static void stm32f405_timer_interrupt(void *opaque)
         !(s->tim_ccmr2 & TIM_CCMR2_OC3M0) &&
         (s->tim_ccmr2 & TIM_CCMR2_OC3PE) &&
         s->tim_ccer & TIM_CCER_CC3E) {
-        fprintf(stderr, "Tilt Angle: %d\n",
-                (((s->tim_ccr3 * 2) - 500) / 10) - 90);
+        pwm_tilt_angle = (int) (((s->tim_ccr3 * 2) - 500) / 10) - 90;
+        DB_PRINT("Tilt Angle: %d\n", pwm_tilt_angle);
 
-#if EXTERNAL_TCP_ACCESS
-        gpio_pin_write(&s->tcp_info, "Tilt", (int) (((s->tim_ccr3 * 2) - 500) / 10) - 90);
-#endif
+    #if EXTERNAL_TCP_ACCESS
+        if (s->prev_pwm_tilt_angle != pwm_tilt_angle) {
+            gpio_pin_write(&s->tcp_info, "Tilt", pwm_tilt_angle);
+            s->prev_pwm_tilt_angle = pwm_tilt_angle;
+        }
+    #endif
 
-        if ((int) (((s->tim_ccr3 * 2) - 500) / 10) - 90 > 85 ||
-            (int) (((s->tim_ccr3 * 2) - 500) / 10) - 90 < -85) {
-            fprintf(stderr, "CAUTION: The title angle is outside of the safe " \
+        if (pwm_tilt_angle > 85 || pwm_tilt_angle < -85) {
+            DB_PRINT("CAUTION: The tilt angle is outside of the safe " \
                 "region\n");
         }
         stm32f405_timer_set_alarm(s);
@@ -206,7 +212,8 @@ static void stm32f405_timer_reset(DeviceState *dev)
                      (s->freq_hz / 1000);
 
 #if EXTERNAL_TCP_ACCESS
-    s->pwm_angle = 0;
+    s->prev_pwm_pan_angle = 100;
+    s->prev_pwm_tilt_angle = 100;
 #endif
 }
 

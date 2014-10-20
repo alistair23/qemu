@@ -146,7 +146,8 @@ typedef struct STM32f405TimerState {
      */
      pwm_tcp_connection tcp_info;
 
-     int pwm_angle;
+     int prev_pwm_pan_angle;
+     int prev_pwm_tilt_angle;
      /* END TCP External Access to GPIO */
      #endif
 } STM32f405TimerState;
