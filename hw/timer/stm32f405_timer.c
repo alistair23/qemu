@@ -36,6 +36,60 @@
 
 #define DB_PRINT(fmt, args...) DB_PRINT_L(1, fmt, ## args)
 
+#if EXTERNAL_TCP_ACCESS
+/* TCP External Access to GPIO
+ * This is based on the work by Biff Eros
+ * https://sites.google.com/site/bifferboard/Home/howto/qemu
+ */
+
+static int tcp_connection_open(pwm_tcp_connection* c)
+{
+    struct sockaddr_in remote;
+
+    if ((c->socket = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+        fprintf(stderr, "%s: Socket creation failed\n", __func__);
+        return -1;
+    }
+
+    remote.sin_family = AF_INET;
+    remote.sin_port = htons(PANEL_PORT);
+    remote.sin_addr.s_addr = inet_addr("127.0.0.1");
+    if (connect(c->socket, (struct sockaddr *)&remote, sizeof(remote)) == -1) {
+        fprintf(stderr, "%s: Connection creation failed\n", __func__);
+        close(c->socket);
+        c->socket = -1;
+        return -1;
+    }
+
+    FD_ZERO(&c->fds);
+
+    /* Set our connected socket */
+    FD_SET(c->socket, &c->fds);
+
+    DB_PRINT("Connection successful\n");
+    return 0;
+}
+
+static void tcp_connection_command(pwm_tcp_connection* c, const char* command)
+{
+    if (send(c->socket, command, strlen(command), 0) < 0) {
+        fprintf(stderr, "%s: Sending failed\n", __func__);
+        exit(1);
+    }
+}
+
+static void gpio_pin_write(pwm_tcp_connection* c, const char* pan_tilt,
+                           int angle)
+{
+    char command[100];
+
+    sprintf(command, "PWM W %s %d\r\n", pan_tilt, angle);
+    tcp_connection_command(c, command);
+}
+
+/* END TCP External Access to PWM */
+#endif
+
 static void stm32f405_timer_set_alarm(STM32f405TimerState *s);
 
 static void stm32f405_timer_interrupt(void *opaque)
@@ -66,6 +120,11 @@ static void stm32f405_timer_interrupt(void *opaque)
         s->tim_ccer & TIM_CCER_CC4E) {
         fprintf(stderr, "Pan Angle: %d\n",
                 (int) (((s->tim_ccr4 * 2) - 500) / 11.11) - 90);
+
+#if EXTERNAL_TCP_ACCESS
+        gpio_pin_write(&s->tcp_info, "Pan", (int) (((s->tim_ccr4 * 2) - 500) / 11.11) - 90);
+#endif
+
         if ((int) (((s->tim_ccr4 * 2) - 500) / 11.11) - 90 > 85 ||
             (int) (((s->tim_ccr4 * 2) - 500) / 11.11) - 90 < -85) {
             fprintf(stderr, "CAUTION: The pan angle is outside of the safe " \
@@ -80,6 +139,11 @@ static void stm32f405_timer_interrupt(void *opaque)
         s->tim_ccer & TIM_CCER_CC3E) {
         fprintf(stderr, "Tilt Angle: %d\n",
                 (((s->tim_ccr3 * 2) - 500) / 10) - 90);
+
+#if EXTERNAL_TCP_ACCESS
+        gpio_pin_write(&s->tcp_info, "Tilt", (int) (((s->tim_ccr3 * 2) - 500) / 10) - 90);
+#endif
+
         if ((int) (((s->tim_ccr3 * 2) - 500) / 10) - 90 > 85 ||
             (int) (((s->tim_ccr3 * 2) - 500) / 10) - 90 < -85) {
             fprintf(stderr, "CAUTION: The title angle is outside of the safe " \
@@ -140,6 +204,10 @@ static void stm32f405_timer_reset(DeviceState *dev)
 
     s->tick_offset = qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL) *
                      (s->freq_hz / 1000);
+
+#if EXTERNAL_TCP_ACCESS
+    s->pwm_angle = 0;
+#endif
 }
 
 static uint64_t stm32f405_timer_read(void *opaque, hwaddr offset,
@@ -329,6 +397,20 @@ static void stm32f405_timer_init(Object *obj)
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->iomem);
 
     s->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, stm32f405_timer_interrupt, s);
+
+    #if EXTERNAL_TCP_ACCESS
+    /* TCP External Access to GPIO
+     * This is based on the work by Biff Eros
+     * https://sites.google.com/site/bifferboard/Home/howto/qemu
+     */
+
+    DB_PRINT("WARNING: Using the GPIO external access makes QEMU slow " \
+              "and unstable. It is currently in alpha and constantly changing.\n" \
+              "Use at your own risk!\n\n");
+
+    tcp_connection_open(&s->tcp_info);
+    /* END TCP External Access to GPIO */
+    #endif
 }
 
 static void stm32f405_timer_class_init(ObjectClass *klass, void *data)

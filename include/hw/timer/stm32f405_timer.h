@@ -78,6 +78,35 @@
 #define STM32F405TIMER(obj) OBJECT_CHECK(STM32f405TimerState, \
                             (obj), TYPE_STM32F405_TIMER)
 
+/* WARNING: Using the GPIO external access makes QEMU slow and unstable.
+ * It is currently in alpha and constantly changing.
+ * Use at your own risk!
+ */
+
+#define EXTERNAL_TCP_ACCESS 0
+
+#if EXTERNAL_TCP_ACCESS
+/* TCP External Access to GPIO
+ * This is based on the work by Biff Eros
+ * https://sites.google.com/site/bifferboard/Home/howto/qemu
+ */
+#include <stdlib.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+
+#define GPIO_PINS 16
+#define PANEL_PORT 4321
+
+typedef struct pwm_tcp_connection {
+    int socket;
+    fd_set fds;
+} pwm_tcp_connection;
+/* END TCP External Access to PWM */
+#endif
+
 typedef struct STM32f405TimerState {
     /* <private> */
     SysBusDevice parent_obj;
@@ -109,6 +138,17 @@ typedef struct STM32f405TimerState {
     uint32_t tim_dcr;
     uint32_t tim_dmar;
     uint32_t tim_or;
+
+    #if EXTERNAL_TCP_ACCESS
+    /* TCP External Access to GPIO
+     * This is based on the work by Biff Eros
+     * https://sites.google.com/site/bifferboard/Home/howto/qemu
+     */
+     pwm_tcp_connection tcp_info;
+
+     int pwm_angle;
+     /* END TCP External Access to GPIO */
+     #endif
 } STM32f405TimerState;
 
 #endif
