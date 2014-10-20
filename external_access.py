@@ -48,8 +48,10 @@ class Server(asynchat.async_chat):
     self.server = server
     self.server.clients[sock.fileno()] = self
 
-    self.wmatch = re.compile(r"GPIO W . (\d{1,5}) (\d{1,5})")
-    self.rmatch = re.compile(r"GPIO R . (\d{1,5})")
+    self.gpiowmatch = re.compile(r"GPIO W . (\d{1,5}) (\d{1,5})")
+    self.gpiormatch = re.compile(r"GPIO R . (\d{1,5})")
+    self.pwmw_pan_match = re.compile(r"PWM W Pan ([-0+]?\d)")
+    self.pwmw_tilt_match = re.compile(r"PWM W Tilt ([-0+]?\d)")
 
     self.pins_a = pins_a
     self.pins_b = pins_b
@@ -63,7 +65,7 @@ class Server(asynchat.async_chat):
 
   def found_terminator(self):
     if self.data.startswith("GPIO W "):
-      m = self.wmatch.match(self.data)
+      m = self.gpiowmatch.match(self.data)
       if m:
         reg, val = m.groups()
         reg = int(reg)
@@ -89,7 +91,7 @@ class Server(asynchat.async_chat):
             for i in xrange(0, len(val) - 2):
               self.pins_f[-(i + 1)] = val[i + 2]
     elif self.data.startswith("GPIO R "):
-      m = self.rmatch.match(self.data)
+      m = self.gpiormatch.match(self.data)
       if m:
         for s in self.data.split():
          if s.isdigit():
@@ -112,6 +114,18 @@ class Server(asynchat.async_chat):
           else:
             # Unsupported GPIO device
             self.push('Unsupported')
+    elif self.data.startswith("PWM W "):
+      m = self.pwmw_pan_match.match(self.data)
+      if m:
+        val = m.groups()
+        val = int(val[0])
+        print "PWM Pan Angle is:", val, "degrees"
+
+      m = self.pwmw_tilt_match.match(self.data)
+      if m:
+        val = m.groups()
+        val = int(val[0])
+        print "PWM Tilt Angle is:", val, "degrees"
     else:
       print "Received invalid command", repr(self.data)
     self.data = ""
