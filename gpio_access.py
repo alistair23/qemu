@@ -25,12 +25,15 @@ class AlarmException(Exception):
       temp_prompt = '\n'
     else:
       temp_prompt = prompt
+
     try:
-        text = raw_input(temp_prompt)
-        signal.alarm(0)
-        return text
+      text = raw_input(temp_prompt)
+      signal.alarm(0)
+      return text
     except AlarmException:
       self.dont_update = 1
+    except EOFError:
+      return "ERROR"
     signal.signal(signal.SIGALRM, signal.SIG_IGN)
     return ''
 
@@ -150,6 +153,9 @@ class Connection(asyncore.dispatcher):
     a = AlarmException()
     cmdline = a.nonBlockingRawInput(prompt=prompt)
 
+    if cmdline == "ERROR":
+      return 0
+
     self.execute_cmd(cmdline)
 
   def execute_cmd(self, cmd):
@@ -221,7 +227,9 @@ class Connection(asyncore.dispatcher):
       print "Received invalid command", repr(cmd)
 
   def handle_close(self):
+    del self.server.clients[self.socket.fileno()]
     self.close()
+    self.exit()
 
   def GetDefaultPins(self):
     print "Setting Pins"
@@ -236,12 +244,14 @@ def main():
   s = Connection()
 
   print "Serving access to GPIO Panel"
-  thread = threading.Thread(target=asyncore.loop)
+  thread = threading.Thread(target=asyncore.loop,kwargs = {'timeout':1})
   thread.start()
-  while True:
-    #if Terminal.read_exec_command(t, '(Netduio Plus 2) '):
-    #  s.qemu_channel.push('0')
-    s.read_exec_command('(Netduio Plus 2) ')
+  val = 1
+  while val != 0:
+    val = s.read_exec_command('(Netduio Plus 2) ')
+
+  print "Exiting..."
+  os.system("pkill python")
 
 if __name__ == "__main__":
 
