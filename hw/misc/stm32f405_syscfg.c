@@ -38,7 +38,7 @@
 
 static void stm32f405_syscfg_reset(DeviceState *dev)
 {
-    STM32f405SyscfgState *s = STM32F405_SYSCFG(dev);
+    STM32F405SyscfgState *s = STM32F405_SYSCFG(dev);
 
     s->syscfg_memrmp = 0x00000000;
     s->syscfg_pmc = 0x00000000;
@@ -51,7 +51,7 @@ static void stm32f405_syscfg_reset(DeviceState *dev)
 
 static void stm32f405_syscfg_set_irq(void * opaque, int irq, int level)
 {
-    STM32f405SyscfgState *s = opaque;
+    STM32F405SyscfgState *s = opaque;
     uint8_t config;
 
     DB_PRINT("Interupt: GPIO: %d, Line: %d; Level: %d\n", irq / 16,
@@ -162,9 +162,9 @@ static void stm32f405_syscfg_set_irq(void * opaque, int irq, int level)
 static uint64_t stm32f405_syscfg_read(void *opaque, hwaddr addr,
                                      unsigned int size)
 {
-    STM32f405SyscfgState *s = opaque;
+    STM32F405SyscfgState *s = opaque;
 
-    DB_PRINT("0x%x\n", (uint) addr);
+    DB_PRINT("0x%"HWADDR_PRIx"\n", addr);
 
     switch (addr) {
     case SYSCFG_MEMRMP:
@@ -183,7 +183,7 @@ static uint64_t stm32f405_syscfg_read(void *opaque, hwaddr addr,
         return s->syscfg_cmpcr;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "STM32F405_syscfg_read: Bad offset %x\n", (int)addr);
+                      "%s: Bad offset 0x%"HWADDR_PRIx"\n", __func__, addr);
         return 0;
     }
 
@@ -193,21 +193,21 @@ static uint64_t stm32f405_syscfg_read(void *opaque, hwaddr addr,
 static void stm32f405_syscfg_write(void *opaque, hwaddr addr,
                        uint64_t val64, unsigned int size)
 {
-    STM32f405SyscfgState *s = opaque;
+    STM32F405SyscfgState *s = opaque;
     uint32_t value = val64;
 
-    DB_PRINT("0x%x, 0x%x\n", value, (uint) addr);
+    DB_PRINT("0x%x, 0x%"HWADDR_PRIx"\n", value, addr);
 
     switch (addr) {
     case SYSCFG_MEMRMP:
         qemu_log_mask(LOG_UNIMP,
-                      "STM32F405_syscfg_write: Changeing the memory mapping " \
-                      "isn't supported in QEMU\n");
+                      "%s: Changeing the memory mapping isn't supported " \
+                      "in QEMU\n", __func__);
         return;
     case SYSCFG_PMC:
         qemu_log_mask(LOG_UNIMP,
-                      "STM32F405_syscfg_write: Peripheral mode configuration " \
-                      "isn't supported in QEMU\n");
+                      "%s: Changeing the memory mapping isn't supported " \
+                      "in QEMU\n", __func__);
         return;
     case SYSCFG_EXTICR1:
         s->syscfg_exticr1 = (value & 0xFFFF);
@@ -226,7 +226,7 @@ static void stm32f405_syscfg_write(void *opaque, hwaddr addr,
         return;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "STM32F405_syscfg_write: Bad offset %x\n", (int)addr);
+                      "%s: Bad offset 0x%"HWADDR_PRIx"\n", __func__, addr);
     }
 }
 
@@ -238,12 +238,12 @@ static const MemoryRegionOps stm32f405_syscfg_ops = {
 
 static void stm32f405_syscfg_init(Object *obj)
 {
-    STM32f405SyscfgState *s = STM32F405_SYSCFG(obj);
+    STM32F405SyscfgState *s = STM32F405_SYSCFG(obj);
 
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
     memory_region_init_io(&s->mmio, obj, &stm32f405_syscfg_ops, s,
-                          TYPE_STM32F405_SYSCFG, 0x1000);
+                          TYPE_STM32F405_SYSCFG, 0x400);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->mmio);
 
     qdev_init_gpio_in(DEVICE(obj), stm32f405_syscfg_set_irq, 16 * 9);
@@ -260,7 +260,7 @@ static void stm32f405_syscfg_class_init(ObjectClass *klass, void *data)
 static const TypeInfo stm32f405_syscfg_info = {
     .name          = TYPE_STM32F405_SYSCFG,
     .parent        = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(STM32f405SyscfgState),
+    .instance_size = sizeof(STM32F405SyscfgState),
     .instance_init = stm32f405_syscfg_init,
     .class_init    = stm32f405_syscfg_class_init,
 };
