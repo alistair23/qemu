@@ -47,7 +47,7 @@
 
 #define TYPE_STM32F405_USART "stm32f405-usart"
 #define STM32F405_USART(obj) \
-    OBJECT_CHECK(STM32f405UsartState, (obj), TYPE_STM32F405_USART)
+    OBJECT_CHECK(STM32F405UsartState, (obj), TYPE_STM32F405_USART)
 
 typedef struct {
     /* <private> */
@@ -66,4 +66,4 @@ typedef struct {
 
     CharDriverState *chr;
     qemu_irq irq;
-} STM32f405UsartState;
+} STM32F405UsartState;

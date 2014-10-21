@@ -38,7 +38,7 @@
 
 static int stm32f405_usart_can_receive(void *opaque)
 {
-    STM32f405UsartState *s = opaque;
+    STM32F405UsartState *s = opaque;
 
     if (!(s->usart_sr & USART_SR_RXNE)) {
         return 1;
@@ -49,7 +49,7 @@ static int stm32f405_usart_can_receive(void *opaque)
 
 static void stm32f405_usart_receive(void *opaque, const uint8_t *buf, int size)
 {
-    STM32f405UsartState *s = opaque;
+    STM32F405UsartState *s = opaque;
 
     s->usart_dr = *buf;
 
@@ -70,7 +70,7 @@ static void stm32f405_usart_receive(void *opaque, const uint8_t *buf, int size)
 
 static void stm32f405_usart_reset(DeviceState *dev)
 {
-    STM32f405UsartState *s = STM32F405_USART(dev);
+    STM32F405UsartState *s = STM32F405_USART(dev);
 
     s->usart_sr = USART_SR_RESET;
     s->usart_dr = 0x00000000;
@@ -84,7 +84,7 @@ static void stm32f405_usart_reset(DeviceState *dev)
 static uint64_t stm32f405_usart_read(void *opaque, hwaddr addr,
                                        unsigned int size)
 {
-    STM32f405UsartState *s = opaque;
+    STM32F405UsartState *s = opaque;
     uint64_t retvalue;
 
     DB_PRINT("Read 0x%"HWADDR_PRIx"\n", addr);
@@ -101,6 +101,9 @@ static uint64_t stm32f405_usart_read(void *opaque, hwaddr addr,
         DB_PRINT("Value: 0x%" PRIx32 ", %c\n", s->usart_dr, (char) s->usart_dr);
         s->usart_sr |= USART_SR_TXE;
         s->usart_sr &= ~USART_SR_RXNE;
+        if (s->chr) {
+            qemu_chr_accept_input(s->chr);
+        }
         return s->usart_dr & 0x3FF;
     case USART_BRR:
         return s->usart_brr;
@@ -114,8 +117,7 @@ static uint64_t stm32f405_usart_read(void *opaque, hwaddr addr,
         return s->usart_gtpr;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "STM32F405_usart_read: Bad offset " \
-                      "0x%"HWADDR_PRIx"\n", addr);
+                      "%s: Bad offset 0x%"HWADDR_PRIx"\n", __func__, addr);
         return 0;
     }
 
@@ -125,7 +127,7 @@ static uint64_t stm32f405_usart_read(void *opaque, hwaddr addr,
 static void stm32f405_usart_write(void *opaque, hwaddr addr,
                                   uint64_t val64, unsigned int size)
 {
-    STM32f405UsartState *s = opaque;
+    STM32F405UsartState *s = opaque;
     uint32_t value = val64;
     unsigned char ch;
 
@@ -166,8 +168,7 @@ static void stm32f405_usart_write(void *opaque, hwaddr addr,
         return;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "STM32F405_usart_write: Bad offset " \
-                      "0x%"HWADDR_PRIx"\n", addr);
+                      "%s: Bad offset 0x%"HWADDR_PRIx"\n", __func__, addr);
     }
 }
 
@@ -179,7 +180,7 @@ static const MemoryRegionOps stm32f405_usart_ops = {
 
 static void stm32f405_usart_init(Object *obj)
 {
-    STM32f405UsartState *s = STM32F405_USART(obj);
+    STM32F405UsartState *s = STM32F405_USART(obj);
 
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
@@ -205,7 +206,7 @@ static void stm32f405_usart_class_init(ObjectClass *klass, void *data)
 static const TypeInfo stm32f405_usart_info = {
     .name          = TYPE_STM32F405_USART,
     .parent        = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(STM32f405UsartState),
+    .instance_size = sizeof(STM32F405UsartState),
     .instance_init = stm32f405_usart_init,
     .class_init    = stm32f405_usart_class_init,
 };
