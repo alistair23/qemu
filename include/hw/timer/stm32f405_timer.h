@@ -75,7 +75,7 @@
 #define TIM_DIER_UIE  1
 
 #define TYPE_STM32F405_TIMER "stm32f405-timer"
-#define STM32F405TIMER(obj) OBJECT_CHECK(STM32f405TimerState, \
+#define STM32F405TIMER(obj) OBJECT_CHECK(STM32F405TimerState, \
                             (obj), TYPE_STM32F405_TIMER)
 
 /* WARNING: Using the GPIO external access makes QEMU slow and unstable.
@@ -107,7 +107,7 @@ typedef struct pwm_tcp_connection {
 /* END TCP External Access to PWM */
 #endif
 
-typedef struct STM32f405TimerState {
+typedef struct STM32F405TimerState {
     /* <private> */
     SysBusDevice parent_obj;
 
@@ -150,6 +150,6 @@ typedef struct STM32f405TimerState {
      int prev_pwm_tilt_angle;
      /* END TCP External Access to GPIO */
      #endif
-} STM32f405TimerState;
+} STM32F405TimerState;
 
 #endif
