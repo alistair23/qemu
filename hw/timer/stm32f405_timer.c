@@ -166,9 +166,9 @@ static void stm32f405_timer_set_alarm(STM32f405TimerState *s)
 
     DB_PRINT("Alarm set at: 0x%x\n", s->tim_cr1);
 
-    now = qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL);
-    //ticks = s->tim_arr - (((now * (s->freq_hz / 1000)) - s->tick_offset) /
-    ticks = s->tim_arr - ((s->tick_offset + (now * (s->freq_hz / 1000))) /
+    now = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
+    ticks = s->tim_arr -
+            ((s->tick_offset + muldiv64(s->freq_hz, now, 1000000000ULL)) /
             (s->tim_psc + 1));
 
     DB_PRINT("Alarm set in %d ticks\n", ticks);
@@ -177,12 +177,11 @@ static void stm32f405_timer_set_alarm(STM32f405TimerState *s)
         timer_del(s->timer);
         stm32f405_timer_interrupt(s);
     } else {
-        timer_mod(s->timer, (now + (int64_t) ticks / 1000000));
-        //timer_mod(s->timer, ((now * (s->freq_hz / 1000)) / (s->tim_psc + 1)) +
-        //                     (int64_t) ticks);
+        timer_mod(s->timer, now +
+                  muldiv64(ticks, 1000000000ULL, get_ticks_per_sec()));
+
         DB_PRINT("Wait Time: %" PRId64 " ticks\n",
-                 ((now * (s->freq_hz / 1000)) / (s->tim_psc + 1)) +
-                 (int64_t) ticks);
+                 now + muldiv64(ticks, 1000000000ULL, get_ticks_per_sec()));
     }
 }
 
@@ -210,8 +209,9 @@ static void stm32f405_timer_reset(DeviceState *dev)
     s->tim_dmar = 0;
     s->tim_or = 0;
 
-    s->tick_offset = qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL) *
-                     (s->freq_hz / 1000);
+    s->tick_offset = muldiv64(s->freq_hz,
+                              qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL),
+                              1000000000ULL);
 
 #if EXTERNAL_TCP_ACCESS
     s->prev_pwm_pan_angle = 100;
@@ -246,8 +246,8 @@ static uint64_t stm32f405_timer_read(void *opaque, hwaddr offset,
     case TIM_CCER:
         return s->tim_ccer;
     case TIM_CNT:
-        s->tim_cnt = s->tick_offset + (qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL) *
-                                       (s->freq_hz / 1000));
+        s->tim_cnt = s->tick_offset + muldiv64(s->freq_hz,
+                     qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL), 1000000000ULL);
         return s->tim_cnt;
     case TIM_PSC:
         return s->tim_psc;
@@ -405,7 +405,7 @@ static void stm32f405_timer_init(Object *obj)
                           "stm32f405_timer", 0x2000);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->iomem);
 
-    s->timer = timer_new_ms(QEMU_CLOCK_VIRTUAL, stm32f405_timer_interrupt, s);
+    s->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, stm32f405_timer_interrupt, s);
 
     #if EXTERNAL_TCP_ACCESS
     /* TCP External Access to GPIO
