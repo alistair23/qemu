@@ -167,6 +167,7 @@ static void stm32f405_timer_set_alarm(STM32f405TimerState *s)
     DB_PRINT("Alarm set at: 0x%x\n", s->tim_cr1);
 
     now = qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL);
+    //ticks = s->tim_arr - (((now * (s->freq_hz / 1000)) - s->tick_offset) /
     ticks = s->tim_arr - ((s->tick_offset + (now * (s->freq_hz / 1000))) /
             (s->tim_psc + 1));
 
@@ -176,8 +177,9 @@ static void stm32f405_timer_set_alarm(STM32f405TimerState *s)
         timer_del(s->timer);
         stm32f405_timer_interrupt(s);
     } else {
-        timer_mod(s->timer, ((now * (s->freq_hz / 1000)) / (s->tim_psc + 1)) +
-                             (int64_t) ticks);
+        timer_mod(s->timer, (now + (int64_t) ticks / 1000000));
+        //timer_mod(s->timer, ((now * (s->freq_hz / 1000)) / (s->tim_psc + 1)) +
+        //                     (int64_t) ticks);
         DB_PRINT("Wait Time: %" PRId64 " ticks\n",
                  ((now * (s->freq_hz / 1000)) / (s->tim_psc + 1)) +
                  (int64_t) ticks);
@@ -403,7 +405,7 @@ static void stm32f405_timer_init(Object *obj)
                           "stm32f405_timer", 0x2000);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->iomem);
 
-    s->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, stm32f405_timer_interrupt, s);
+    s->timer = timer_new_ms(QEMU_CLOCK_VIRTUAL, stm32f405_timer_interrupt, s);
 
     #if EXTERNAL_TCP_ACCESS
     /* TCP External Access to GPIO
