@@ -168,7 +168,7 @@ static void stm32f405_timer_set_alarm(STM32F405TimerState *s)
 
     now = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
     ticks = s->tim_arr -
-            ((s->tick_offset + muldiv64(s->freq_hz, now, 1000000000ULL)) /
+            ((muldiv64(s->freq_hz, now, 1000000000ULL) - s->tick_offset) /
             (s->tim_psc + 1));
 
     DB_PRINT("Alarm set in %d ticks\n", ticks);
@@ -217,6 +217,8 @@ static void stm32f405_timer_reset(DeviceState *dev)
     s->prev_pwm_pan_angle = 100;
     s->prev_pwm_tilt_angle = 100;
 #endif
+
+    stm32f405_timer_set_alarm(s);
 }
 
 static uint64_t stm32f405_timer_read(void *opaque, hwaddr offset,
@@ -246,8 +248,9 @@ static uint64_t stm32f405_timer_read(void *opaque, hwaddr offset,
     case TIM_CCER:
         return s->tim_ccer;
     case TIM_CNT:
-        s->tim_cnt = s->tick_offset + muldiv64(s->freq_hz,
-                     qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL), 1000000000ULL);
+        s->tim_cnt = muldiv64(s->freq_hz,
+                              qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL),
+                              1000000000ULL) - s->tick_offset;
         return s->tim_cnt;
     case TIM_PSC:
         return s->tim_psc;
@@ -317,10 +320,13 @@ static void stm32f405_timer_write(void *opaque, hwaddr offset,
         s->tim_ccer = value;
         return;
     case TIM_CNT:
-        s->tick_offset += value - (s->tick_offset +
-                          muldiv64(s->freq_hz,
+        /* The guest is changing the clock counter.
+         * Subtract the difference between the value and the current time
+         * from tick_offset and update the timer alarm.
+         */
+        s->tick_offset -= value - (muldiv64(s->freq_hz,
                                    qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL),
-                                   1000000000ULL));
+                                   1000000000ULL) - s->tick_offset);
         s->tim_cnt = value;
         stm32f405_timer_set_alarm(s);
         return;
