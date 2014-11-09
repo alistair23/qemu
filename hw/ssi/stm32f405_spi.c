@@ -53,7 +53,7 @@ static void stm32f405_spi_reset(DeviceState *dev)
 
 static void stm32f405_spi_transfer(STM32f405SpiState *s)
 {
-    DB_PRINT("Data to sent: 0x%x\n", s->spi_dr);
+    DB_PRINT("Data to send: 0x%x\n", s->spi_dr);
 
     s->spi_dr = ssi_transfer(s->ssi, s->spi_dr);
     s->spi_sr |= SPI_SR_RXNE;
