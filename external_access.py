@@ -18,7 +18,7 @@ class AlarmException(Exception):
     self.dont_update = 1
     raise AlarmException
 
-  def nonBlockingRawInput(self, prompt='', timeout=5):
+  def nonBlockingRawInput(self, prompt='', timeout=8):
     signal.signal(signal.SIGALRM, self.alarmHandler)
     signal.alarm(timeout)
     if self.dont_update == 1:
