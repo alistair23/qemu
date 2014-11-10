@@ -173,11 +173,7 @@ static void netduinoplus2_init(MachineState *machine)
     }
 
     /* System configuration controller */
-    syscfg = qdev_create(NULL, "stm32f405-syscfg");
-    qdev_init_nofail(syscfg);
-    busdev = SYS_BUS_DEVICE(syscfg);
-    sysbus_mmio_map(busdev, 0, 0x40013800);
-    sysbus_connect_irq(busdev, 0, pic[71]);
+    syscfg = sysbus_create_simple("stm32f405-syscfg", 0x40013800, pic[71]);
     for (i = 0; i < 9; ++i) {
         for (j = 0; j < 16; j++) {
             qdev_connect_gpio_out(gpio[i], j, qdev_get_gpio_in(syscfg,
