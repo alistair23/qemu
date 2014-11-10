@@ -366,7 +366,7 @@ static void stm32f405_adc_init(Object *obj)
     sysbus_init_irq(SYS_BUS_DEVICE(obj), &s->irq);
 
     memory_region_init_io(&s->mmio, obj, &stm32f405_adc_ops, s,
-                          TYPE_STM32F405_ADC, 0x1000);
+                          TYPE_STM32F405_ADC, 0x400);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->mmio);
 }
 

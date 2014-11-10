@@ -169,7 +169,7 @@ static void stm32f405_exti_init(Object *obj)
     }
 
     memory_region_init_io(&s->mmio, obj, &stm32f405_exti_ops, s,
-                          TYPE_STM32F405_EXTI, 0x1000);
+                          TYPE_STM32F405_EXTI, 0x400);
     sysbus_init_mmio(SYS_BUS_DEVICE(obj), &s->mmio);
 
     qdev_init_gpio_in(DEVICE(obj), stm32f405_exti_set_irq,
