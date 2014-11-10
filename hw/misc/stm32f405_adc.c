@@ -66,6 +66,8 @@
 #define ADC_CR2_CONT    0x02
 #define ADC_CR2_SWSTART 0x40000000
 
+#define ADC_CR1_RES 0x3000000
+
 #ifdef RAND_MAX
 /* The rand() function is avaliable */
 #define RAND_AVALIABLE
@@ -136,6 +138,16 @@ static uint32_t stm32f405_adc_generate_value(STM32f405AdcState *s)
     #else
     s->adc_dr = s->adc_dr + 7;
     #endif
+
+    if ((s->adc_cr1 & ADC_CR1_RES) == 00) {
+        /* 12-bit resolution, do nothing */
+    } else if ((s->adc_cr1 & ADC_CR1_RES) == 01) {
+        s->adc_dr = s->adc_dr & 0xFFFC;
+    } else if ((s->adc_cr1 & ADC_CR1_RES) == 10) {
+        s->adc_dr = s->adc_dr & 0xFFF0;
+    } else {
+        s->adc_dr = s->adc_dr & 0xFFC0;
+    }
 
     return s->adc_dr;
 }
