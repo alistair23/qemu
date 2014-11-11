@@ -64,6 +64,7 @@
 
 #define ADC_CR2_ADON    0x01
 #define ADC_CR2_CONT    0x02
+#define ADC_CR2_ALIGN   0x800
 #define ADC_CR2_SWSTART 0x40000000
 
 #define ADC_CR1_RES 0x3000000
@@ -153,7 +154,11 @@ static uint32_t stm32f405_adc_generate_value(STM32f405AdcState *s)
         s->adc_dr = s->adc_dr & 0x3F;
     }
 
-    return s->adc_dr;
+    if (s->adc_cr2 & ADC_CR2_ALIGN) {
+        return (s->adc_dr << 1) & 0xFFF0;
+    } else {
+        return s->adc_dr;
+    }
 }
 
 static uint64_t stm32f405_adc_read(void *opaque, hwaddr addr,
@@ -174,7 +179,7 @@ static uint64_t stm32f405_adc_read(void *opaque, hwaddr addr,
     case ADC_CR1:
         return s->adc_cr1;
     case ADC_CR2:
-        return s->adc_cr2;
+        return s->adc_cr2 & 0xFFFFFFF;
     case ADC_SMPR1:
         return s->adc_smpr1;
     case ADC_SMPR2:
@@ -236,9 +241,6 @@ static uint64_t stm32f405_adc_read(void *opaque, hwaddr addr,
         return s->adc_jdr4 - s->adc_jofr4;
     case ADC_DR:
         if ((s->adc_cr2 & ADC_CR2_ADON) && (s->adc_cr2 & ADC_CR2_SWSTART)) {
-            if (!(s->adc_cr2 & ADC_CR2_CONT)) {
-                s->adc_cr2 ^= ADC_CR2_ADON;
-            }
             s->adc_cr2 ^= ADC_CR2_SWSTART;
             return stm32f405_adc_generate_value(s);
         } else {
