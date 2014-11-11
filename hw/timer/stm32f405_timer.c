@@ -95,8 +95,6 @@ static void stm32f405_timer_set_alarm(STM32F405TimerState *s);
 static void stm32f405_timer_interrupt(void *opaque)
 {
     STM32F405TimerState *s = opaque;
-    int pwm_pan_angle;
-    int pwm_tilt_angle;
 
     DB_PRINT("Interrupt\n");
 
@@ -113,48 +111,6 @@ static void stm32f405_timer_interrupt(void *opaque)
         /* PWM 2 - Mode 1 */
         DB_PRINT("Duty Cycle: %d%%\n",
                 s->tim_ccr2 / (100 * (s->tim_psc + 1)));
-        stm32f405_timer_set_alarm(s);
-    }
-
-    if (s->tim_ccmr2 & (TIM_CCMR2_OC4M2 + TIM_CCMR2_OC4M1) &&
-        !(s->tim_ccmr2 & TIM_CCMR2_OC4M0) &&
-        (s->tim_ccmr2 & TIM_CCMR2_OC4PE) &&
-        s->tim_ccer & TIM_CCER_CC4E) {
-        pwm_pan_angle = (int) (((s->tim_ccr4 * 2) - 500) / 11.11) - 90;
-        DB_PRINT("Pan Angle: %d\n", pwm_pan_angle);
-
-    #if EXTERNAL_TCP_ACCESS
-        if (s->prev_pwm_pan_angle != pwm_pan_angle) {
-            gpio_pin_write(&s->tcp_info, "Pan", pwm_pan_angle);
-            s->prev_pwm_pan_angle = pwm_pan_angle;
-        }
-    #endif
-
-        if (pwm_pan_angle > 85 || pwm_pan_angle < -85) {
-            DB_PRINT("CAUTION: The pan angle is outside of the safe " \
-                "region\n");
-        }
-        stm32f405_timer_set_alarm(s);
-    }
-
-    if (s->tim_ccmr2 & (TIM_CCMR2_OC3M2 + TIM_CCMR2_OC3M1) &&
-        !(s->tim_ccmr2 & TIM_CCMR2_OC3M0) &&
-        (s->tim_ccmr2 & TIM_CCMR2_OC3PE) &&
-        s->tim_ccer & TIM_CCER_CC3E) {
-        pwm_tilt_angle = (int) (((s->tim_ccr3 * 2) - 500) / 10) - 90;
-        DB_PRINT("Tilt Angle: %d\n", pwm_tilt_angle);
-
-    #if EXTERNAL_TCP_ACCESS
-        if (s->prev_pwm_tilt_angle != pwm_tilt_angle) {
-            gpio_pin_write(&s->tcp_info, "Tilt", pwm_tilt_angle);
-            s->prev_pwm_tilt_angle = pwm_tilt_angle;
-        }
-    #endif
-
-        if (pwm_tilt_angle > 85 || pwm_tilt_angle < -85) {
-            DB_PRINT("CAUTION: The tilt angle is outside of the safe " \
-                "region\n");
-        }
         stm32f405_timer_set_alarm(s);
     }
 }
@@ -283,6 +239,8 @@ static void stm32f405_timer_write(void *opaque, hwaddr offset,
 {
     STM32F405TimerState *s = opaque;
     uint32_t value = val64;
+    int pwm_pan_angle;
+    int pwm_tilt_angle;
 
     DB_PRINT("Write 0x%x, 0x%"HWADDR_PRIx"\n", value, offset);
 
@@ -346,9 +304,50 @@ static void stm32f405_timer_write(void *opaque, hwaddr offset,
         return;
     case TIM_CCR3:
         s->tim_ccr3 = value;
+
+        if (s->tim_ccmr2 & (TIM_CCMR2_OC3M2 + TIM_CCMR2_OC3M1) &&
+            !(s->tim_ccmr2 & TIM_CCMR2_OC3M0) &&
+            (s->tim_ccmr2 & TIM_CCMR2_OC3PE) &&
+            s->tim_ccer & TIM_CCER_CC3E) {
+            pwm_tilt_angle = (int) (((s->tim_ccr3 * 2) - 500) / 10) - 90;
+            fprintf(stderr, "Tilt Angle: %d\n", pwm_tilt_angle);
+
+        #if EXTERNAL_TCP_ACCESS
+            if (s->prev_pwm_tilt_angle != pwm_tilt_angle) {
+                gpio_pin_write(&s->tcp_info, "Tilt", pwm_tilt_angle);
+                s->prev_pwm_tilt_angle = pwm_tilt_angle;
+            }
+        #endif
+
+            if (pwm_tilt_angle > 85 || pwm_tilt_angle < -85) {
+                fprintf(stderr, "CAUTION: The tilt angle is outside of the safe " \
+                                "region\n");
+            }
+            stm32f405_timer_set_alarm(s);
+        }
         return;
     case TIM_CCR4:
         s->tim_ccr4 = value;
+
+        if (s->tim_ccmr2 & (TIM_CCMR2_OC4M2 + TIM_CCMR2_OC4M1) &&
+            !(s->tim_ccmr2 & TIM_CCMR2_OC4M0) &&
+            (s->tim_ccmr2 & TIM_CCMR2_OC4PE) &&
+            s->tim_ccer & TIM_CCER_CC4E) {
+            pwm_pan_angle = (int) (((s->tim_ccr4 * 2) - 500) / 11.11) - 90;
+            fprintf(stderr, "Pan Angle: %d\n", pwm_pan_angle);
+
+        #if EXTERNAL_TCP_ACCESS
+            if (s->prev_pwm_pan_angle != pwm_pan_angle) {
+                gpio_pin_write(&s->tcp_info, "Pan", pwm_pan_angle);
+                s->prev_pwm_pan_angle = pwm_pan_angle;
+            }
+        #endif
+
+            if (pwm_pan_angle > 85 || pwm_pan_angle < -85) {
+                fprintf(stderr, "CAUTION: The pan angle is outside of the safe " \
+                                "region\n");
+            }
+        }
         return;
     case TIM_DCR:
         s->tim_dcr = value;
