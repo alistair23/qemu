@@ -139,14 +139,18 @@ static uint32_t stm32f405_adc_generate_value(STM32f405AdcState *s)
     s->adc_dr = s->adc_dr + 7;
     #endif
 
-    if ((s->adc_cr1 & ADC_CR1_RES) == 00) {
-        /* 12-bit resolution, do nothing */
-    } else if ((s->adc_cr1 & ADC_CR1_RES) == 01) {
-        s->adc_dr = s->adc_dr & 0xFFFC;
-    } else if ((s->adc_cr1 & ADC_CR1_RES) == 10) {
-        s->adc_dr = s->adc_dr & 0xFFF0;
+    if (((s->adc_cr1 & ADC_CR1_RES) >> 24) == 0b00) {
+        /* 12-bit */
+        s->adc_dr = s->adc_dr & 0xFFF;
+    } else if (((s->adc_cr1 & ADC_CR1_RES) >> 24) == 0b01) {
+        /* 10-bit */
+        s->adc_dr = s->adc_dr & 0x3FF;
+    } else if (((s->adc_cr1 & ADC_CR1_RES) >> 24) == 0b10) {
+        /* 8-bit */
+        s->adc_dr = s->adc_dr & 0xFF;
     } else {
-        s->adc_dr = s->adc_dr & 0xFFC0;
+        /* 6-bit */
+        s->adc_dr = s->adc_dr & 0x3F;
     }
 
     return s->adc_dr;
