@@ -147,6 +147,8 @@ static void netduinoplus2_init(MachineState *machine)
         pic[i] = qdev_get_gpio_in(nvic, i);
     }
 
+    system_clock_scale = 19;
+
     /* Attach UART (uses USART registers) and USART controllers */
     for (i = 0; i < 7; i++) {
         sysbus_create_simple("stm32f405-usart", usart_addr[i],
