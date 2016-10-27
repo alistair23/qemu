@@ -22,6 +22,7 @@
 #include "hw/arm/xlnx-zynqmp.h"
 #include "hw/intc/arm_gic_common.h"
 #include "exec/address-spaces.h"
+#include "hw/boards.h"
 #include "sysemu/kvm.h"
 #include "kvm_arm.h"
 
@@ -43,6 +44,9 @@
 #define QSPI_ADDR           0xff0f0000
 #define LQSPI_ADDR          0xc0000000
 #define QSPI_IRQ            15
+
+#define ARM_GEN_TIMER_ADDR      0xFF260000
+#define ARM_GEN_TIMER_NS_ADDR   0xFF250000
 
 #define DP_ADDR             0xfd4a0000
 #define DP_IRQ              113
@@ -178,6 +182,10 @@ static void xlnx_zynqmp_init(Object *obj)
     object_initialize(&s->qspi, sizeof(s->qspi), TYPE_XLNX_ZYNQMP_QSPIPS);
     qdev_set_parent_bus(DEVICE(&s->qspi), sysbus_get_default());
 
+    object_initialize(&s->arm_gen_timer, sizeof(s->arm_gen_timer),
+                      TYPE_ARM_GEN_TIMER);
+    qdev_set_parent_bus(DEVICE(&s->arm_gen_timer), sysbus_get_default());
+
     object_initialize(&s->dp, sizeof(s->dp), TYPE_XLNX_DP);
     qdev_set_parent_bus(DEVICE(&s->dp), sysbus_get_default());
 
@@ -198,6 +206,16 @@ static void xlnx_zynqmp_realize(DeviceState *dev, Error **errp)
     Error *err = NULL;
 
     ram_size = memory_region_size(s->ddr_ram);
+
+    if (s->secure) {
+        /* If we are secure create a secure duplicate of memory. The board
+         * doesn'tknow if we are secure so we do it here.
+         */
+        s->secure_sysmem = g_new(MemoryRegion, 1);
+        memory_region_init(s->secure_sysmem, OBJECT(dev), "secure-ddr-ram",
+                           UINT64_MAX);
+        memory_region_add_subregion_overlap(s->secure_sysmem, 0, get_system_memory(), -1);
+    }
 
     /* Create the DDR Memory Regions. User friendly checks should happen at
      * the board level
@@ -268,6 +286,11 @@ static void xlnx_zynqmp_realize(DeviceState *dev, Error **errp)
                                  s->virt, "has_el2", NULL);
         object_property_set_int(OBJECT(&s->apu_cpu[i]), GIC_BASE_ADDR,
                                 "reset-cbar", &error_abort);
+        if (s->secure) {
+            object_property_set_link(OBJECT(&s->apu_cpu[i]),
+                                     OBJECT(s->secure_sysmem),
+                                     "secure-memory", &error_abort);
+        }
         object_property_set_bool(OBJECT(&s->apu_cpu[i]), true, "realized",
                                  &err);
         if (err) {
@@ -436,6 +459,15 @@ static void xlnx_zynqmp_realize(DeviceState *dev, Error **errp)
         g_free(bus_name);
         g_free(target_bus);
     }
+
+    object_property_set_bool(OBJECT(&s->arm_gen_timer), true, "realized", &err);
+    if (err) {
+        error_propagate(errp, err);
+        return;
+    }
+    memory_region_add_subregion(s->secure_sysmem, ARM_GEN_TIMER_ADDR,
+                sysbus_mmio_get_region(SYS_BUS_DEVICE(&s->arm_gen_timer), 0));
+    sysbus_mmio_map(SYS_BUS_DEVICE(&s->arm_gen_timer), 1, ARM_GEN_TIMER_NS_ADDR);
 
     object_property_set_bool(OBJECT(&s->dp), true, "realized", &err);
     if (err) {
