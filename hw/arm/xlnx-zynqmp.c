@@ -82,6 +82,14 @@ static const int spi_intr[XLNX_ZYNQMP_NUM_SPIS] = {
     19, 20,
 };
 
+/* These can always be changed, but these seven are the default in the reference
+ * board design.
+ */
+static const uint64_t axi_gpio_addr[XLNX_EP108_NUM_AXI_GPIOS] = {
+    0xa1000000, 0x401000000, 0x1001000000, 0xb1000000, 0x501000000,
+    0x4801000000, 0x81000000,
+};
+
 typedef struct XlnxZynqMPGICRegion {
     int region_index;
     uint32_t address;
@@ -183,6 +191,12 @@ static void xlnx_zynqmp_init(Object *obj)
 
     object_initialize(&s->dpdma, sizeof(s->dpdma), TYPE_XLNX_DPDMA);
     qdev_set_parent_bus(DEVICE(&s->dpdma), sysbus_get_default());
+
+    for (i = 0; i < XLNX_EP108_NUM_AXI_GPIOS; i++) {
+        object_initialize(&s->axi_gpio[i], sizeof(s->axi_gpio[i]),
+                          TYPE_XLNX_AXI_GPIO);
+        qdev_set_parent_bus(DEVICE(&s->axi_gpio[i]), sysbus_get_default());
+    }
 }
 
 static void xlnx_zynqmp_realize(DeviceState *dev, Error **errp)
@@ -454,6 +468,15 @@ static void xlnx_zynqmp_realize(DeviceState *dev, Error **errp)
                              &error_abort);
     sysbus_mmio_map(SYS_BUS_DEVICE(&s->dpdma), 0, DPDMA_ADDR);
     sysbus_connect_irq(SYS_BUS_DEVICE(&s->dpdma), 0, gic_spi[DPDMA_IRQ]);
+
+    /* Connect the GPIO devices. These aren't on the board, but they are in
+     * the PL, so we connect them here instead of in the SoC.
+     */
+    for (i = 0; i < XLNX_EP108_NUM_AXI_GPIOS; i++) {
+        object_property_set_bool(OBJECT(&s->axi_gpio[i]), true, "realized", &error_fatal);
+        sysbus_mmio_map(SYS_BUS_DEVICE(&s->axi_gpio[i]), 0, axi_gpio_addr[i]);
+        /* The device supports interrupts, but they aren't connected */
+    }
 }
 
 static Property xlnx_zynqmp_props[] = {

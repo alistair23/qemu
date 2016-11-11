@@ -22,6 +22,7 @@
 #include "hw/intc/arm_gic.h"
 #include "hw/net/cadence_gem.h"
 #include "hw/char/cadence_uart.h"
+#include "hw/gpio/xlnx-axi-gpio.h"
 #include "hw/ide/pci.h"
 #include "hw/ide/ahci.h"
 #include "hw/sd/sdhci.h"
@@ -49,6 +50,8 @@
 #define XLNX_ZYNQMP_OCM_RAM_SIZE 0x10000
 
 #define XLNX_ZYNQMP_GIC_REGIONS 2
+
+#define XLNX_EP108_NUM_AXI_GPIOS 7
 
 /* ZynqMP maps the ARM GIC regions (GICC, GICD ...) at consecutive 64k offsets
  * and under-decodes the 64k region. This mirrors the 4k regions to every 4k
@@ -90,6 +93,7 @@ typedef struct XlnxZynqMPState {
     XlnxZynqMPQSPIPS qspi;
     XlnxDPState dp;
     XlnxDPDMAState dpdma;
+    XlnxAXIGPIO axi_gpio[XLNX_EP108_NUM_AXI_GPIOS];
 
     char *boot_cpu;
     ARMCPU *boot_cpu_ptr;
