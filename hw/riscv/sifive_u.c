@@ -34,6 +34,8 @@
 #include "qemu/log.h"
 #include "qemu/error-report.h"
 #include "qapi/error.h"
+#include "hw/hw.h"
+#include "hw/ssi/ssi.h"
 #include "hw/boards.h"
 #include "hw/loader.h"
 #include "hw/sysbus.h"
@@ -75,6 +77,9 @@ static const struct MemmapEntry {
     [SIFIVE_U_DRAM] =     { 0x80000000,        0x0 },
     [SIFIVE_U_GEM] =      { 0x10090000,     0x2000 },
     [SIFIVE_U_GEM_MGMT] = { 0x100a0000,     0x1000 },
+    [SIFIVE_U_SPI0] =     { 0x10040000,     0x1000 },
+    [SIFIVE_U_SPI1] =     { 0x10041000,     0x1000 },
+    [SIFIVE_U_SPI2] =     { 0x10050000,     0x1000 },
 };
 
 #define OTP_SERIAL          1
@@ -285,6 +290,66 @@ static void create_fdt(SiFiveUState *s, const struct MemmapEntry *memmap,
     qemu_fdt_setprop_cell(fdt, nodename, "reg", 0x0);
     g_free(nodename);
 
+    nodename = g_strdup_printf("/soc/refclk");
+    qemu_fdt_add_subnode(fdt, nodename);
+    qemu_fdt_setprop_string(fdt, nodename, "compatible", "fixed-clock");
+    qemu_fdt_setprop_cells(fdt, nodename, "#clock-cells", 0);
+    qemu_fdt_setprop_cells(fdt, nodename, "clock-frequency", 0x1fca055);
+    qemu_fdt_setprop_string(fdt, nodename, "clock-output-names", "xtal");
+    qemu_fdt_setprop_cells(fdt, nodename, "phandle", 0x9);
+    qemu_fdt_setprop_cells(fdt, nodename, "linux,phandle", 0x9);
+    refclk_phandle = qemu_fdt_get_phandle(fdt, nodename);
+    g_free(nodename);
+
+    nodename = g_strdup_printf("/soc/spi@%lx",
+        memmap[SIFIVE_U_SPI0].base);
+    qemu_fdt_add_subnode(fdt, nodename);
+    qemu_fdt_setprop_string(fdt, nodename, "compatible", "sifive,spi0");
+    qemu_fdt_setprop_cells(fdt, nodename, "reg",
+        0x0, memmap[SIFIVE_U_SPI0].base,
+        0x0, memmap[SIFIVE_U_SPI0].size,
+        0x0, 0x20000000,
+        0x0, 0x10000000);
+    qemu_fdt_setprop_string(fdt, nodename, "reg-names", "control");
+    qemu_fdt_setprop_cells(fdt, nodename, "clocks", refclk_phandle);
+    qemu_fdt_setprop_cells(fdt, nodename, "interrupt-parent", plic_phandle);
+    qemu_fdt_setprop_cells(fdt, nodename, "interrupts", SIFIVE_U_SPI0_IRQ);
+    qemu_fdt_setprop_cell(fdt, nodename, "#address-cells", 1);
+    qemu_fdt_setprop_cell(fdt, nodename, "#size-cells", 0);
+    g_free(nodename);
+
+    nodename = g_strdup_printf("/soc/spi@%lx",
+        (long)memmap[SIFIVE_U_SPI1].base);
+    qemu_fdt_add_subnode(fdt, nodename);
+    qemu_fdt_setprop_string(fdt, nodename, "compatible", "sifive,spi0");
+    qemu_fdt_setprop_cells(fdt, nodename, "reg",
+        0x0, memmap[SIFIVE_U_SPI1].base,
+        0x0, memmap[SIFIVE_U_SPI1].size,
+        0x0, 0x30000000,
+        0x0, 0x10000000);
+    qemu_fdt_setprop_string(fdt, nodename, "reg-names", "control");
+    qemu_fdt_setprop_cells(fdt, nodename, "clocks", refclk_phandle);
+    qemu_fdt_setprop_cells(fdt, nodename, "interrupt-parent", plic_phandle);
+    qemu_fdt_setprop_cells(fdt, nodename, "interrupts", SIFIVE_U_SPI1_IRQ);
+    qemu_fdt_setprop_cell(fdt, nodename, "#address-cells", 1);
+    qemu_fdt_setprop_cell(fdt, nodename, "#size-cells", 0);
+    g_free(nodename);
+
+    nodename = g_strdup_printf("/soc/spi@%lx",
+        (long)memmap[SIFIVE_U_SPI2].base);
+    qemu_fdt_add_subnode(fdt, nodename);
+    qemu_fdt_setprop_string(fdt, nodename, "compatible", "sifive,spi0");
+    qemu_fdt_setprop_cells(fdt, nodename, "reg",
+        0x0, memmap[SIFIVE_U_SPI2].base,
+        0x0, memmap[SIFIVE_U_SPI2].size);
+    qemu_fdt_setprop_string(fdt, nodename, "reg-names", "control");
+    qemu_fdt_setprop_cells(fdt, nodename, "clocks", refclk_phandle);
+    qemu_fdt_setprop_cells(fdt, nodename, "interrupt-parent", plic_phandle);
+    qemu_fdt_setprop_cells(fdt, nodename, "interrupts", SIFIVE_U_SPI2_IRQ);
+    qemu_fdt_setprop_cell(fdt, nodename, "#address-cells", 1);
+    qemu_fdt_setprop_cell(fdt, nodename, "#size-cells", 0);
+    g_free(nodename);
+
     nodename = g_strdup_printf("/soc/serial@%lx",
         (long)memmap[SIFIVE_U_UART0].base);
     qemu_fdt_add_subnode(fdt, nodename);
@@ -403,6 +468,7 @@ static void riscv_sifive_u_soc_init(Object *obj)
 {
     MachineState *ms = MACHINE(qdev_get_machine());
     SiFiveUSoCState *s = RISCV_U_SOC(obj);
+    int i;
 
     object_initialize_child(obj, "e-cluster", &s->e_cluster,
                             sizeof(s->e_cluster), TYPE_CPU_CLUSTER,
@@ -437,6 +503,11 @@ static void riscv_sifive_u_soc_init(Object *obj)
     qdev_prop_set_uint32(DEVICE(&s->otp), "serial", OTP_SERIAL);
     sysbus_init_child_obj(obj, "gem", &s->gem, sizeof(s->gem),
                           TYPE_CADENCE_GEM);
+
+    for (i = 0; i < SIFIVE_NUM_SPIS; i++) {
+        object_initialize(&s->spi[i], sizeof(s->spi[i]), TYPE_SIFIVE_SPI);
+        qdev_set_parent_bus(DEVICE(&s->spi[i]), sysbus_get_default());
+    }
 }
 
 static bool sifive_u_get_start_in_flash(Object *obj, Error **errp)
@@ -578,6 +649,36 @@ static void riscv_sifive_u_soc_realize(DeviceState *dev, Error **errp)
 
     create_unimplemented_device("riscv.sifive.u.gem-mgmt",
         memmap[SIFIVE_U_GEM_MGMT].base, memmap[SIFIVE_U_GEM_MGMT].size);
+
+    for (i = 0; i < SIFIVE_NUM_SPIS; i++) {
+        if (i == 1) {
+            object_property_set_uint(OBJECT(&s->spi[i]), 32, "cs-width", &err);
+            if (err) {
+                error_propagate(errp, err);
+                return;
+            }
+        }
+        object_property_set_bool(OBJECT(&s->spi[i]), true, "realized", &err);
+        if (err) {
+            error_propagate(errp, err);
+            return;
+        }
+        sysbus_mmio_map(SYS_BUS_DEVICE(&s->spi[i]), 0,
+                        memmap[SIFIVE_U_SPI0 + i].base);
+        sysbus_connect_irq(SYS_BUS_DEVICE(&s->spi[i]), 0,
+                           plic_gpios[sifive_u_spi_irqs[i]]);
+    }
+
+    /* Alias SPI buses to the SoC itself */
+    object_property_add_alias(OBJECT(s), "ssi-0",
+                              OBJECT(&s->spi[0]), "ssi",
+                              &error_abort);
+    object_property_add_alias(OBJECT(s), "ssi-1",
+                              OBJECT(&s->spi[1]), "ssi",
+                              &error_abort);
+    object_property_add_alias(OBJECT(s), "ssi-2",
+                              OBJECT(&s->spi[2]), "ssi",
+                              &error_abort);
 }
 
 static void riscv_sifive_u_soc_class_init(ObjectClass *oc, void *data)

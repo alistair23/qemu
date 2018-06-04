@@ -24,10 +24,14 @@
 #include "hw/riscv/sifive_cpu.h"
 #include "hw/riscv/sifive_u_prci.h"
 #include "hw/riscv/sifive_u_otp.h"
+#include "hw/sd/sd.h"
+#include "hw/ssi/sifive-spi-controller.h"
 
 #define TYPE_RISCV_U_SOC "riscv.sifive.u.soc"
 #define RISCV_U_SOC(obj) \
     OBJECT_CHECK(SiFiveUSoCState, (obj), TYPE_RISCV_U_SOC)
+
+#define SIFIVE_NUM_SPIS       3
 
 typedef struct SiFiveUSoCState {
     /*< private >*/
@@ -41,6 +45,7 @@ typedef struct SiFiveUSoCState {
     DeviceState *plic;
     SiFiveUPRCIState prci;
     SiFiveUOTPState otp;
+    SiFiveSPIState spi[SIFIVE_NUM_SPIS];
     CadenceGEMState gem;
 } SiFiveUSoCState;
 
@@ -74,13 +79,25 @@ enum {
     SIFIVE_U_FLASH0,
     SIFIVE_U_DRAM,
     SIFIVE_U_GEM,
-    SIFIVE_U_GEM_MGMT
+    SIFIVE_U_GEM_MGMT,
+    SIFIVE_U_SPI0,
+    SIFIVE_U_SPI1,
+    SIFIVE_U_SPI2
 };
 
 enum {
     SIFIVE_U_UART0_IRQ = 4,
     SIFIVE_U_UART1_IRQ = 5,
     SIFIVE_U_GEM_IRQ = 0x35
+    SIFIVE_U_SPI0_IRQ = 0x33,
+    SIFIVE_U_SPI1_IRQ = 0x34,
+    SIFIVE_U_SPI2_IRQ = 6
+};
+
+int sifive_u_spi_irqs[SIFIVE_NUM_SPIS] = {
+    SIFIVE_U_SPI0_IRQ,
+    SIFIVE_U_SPI1_IRQ,
+    SIFIVE_U_SPI2_IRQ
 };
 
 enum {
