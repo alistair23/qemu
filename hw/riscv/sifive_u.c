@@ -361,6 +361,16 @@ static void create_fdt(SiFiveUState *s, const struct MemmapEntry *memmap,
     qemu_fdt_setprop_cell(fdt, nodename, "#size-cells", 0);
     g_free(nodename);
 
+    nodename = g_strdup_printf("/soc/spi@%lx/mmc@0",
+        (long)memmap[SIFIVE_U_SPI2].base);
+    qemu_fdt_add_subnode(fdt, nodename);
+    qemu_fdt_setprop_string(fdt, nodename, "compatible", "mmc-spi-slot");
+    qemu_fdt_setprop_cells(fdt, nodename, "reg", 0x0);
+    qemu_fdt_setprop_cells(fdt, nodename, "spi-max-frequency", 0x1312d00);
+    qemu_fdt_setprop_cells(fdt, nodename, "voltage-ranges", 0xce4, 0xce4);
+    qemu_fdt_setprop_cells(fdt, nodename, "disable-wp");
+    g_free(nodename);
+
     nodename = g_strdup_printf("/soc/serial@%lx",
         (long)memmap[SIFIVE_U_UART0].base);
     qemu_fdt_add_subnode(fdt, nodename);
@@ -424,6 +434,11 @@ static void riscv_sifive_u_init(MachineState *machine)
     /* Create the SPI Flash */
     bus = qdev_get_child_bus(DEVICE(&s->soc), "ssi-0");
     dev = ssi_create_slave((SSIBus *) bus, "m25p80");
+    object_property_set_bool(OBJECT(dev), true, "realized", &error_fatal);
+
+    /* Create the SD SPI device */
+    bus = qdev_get_child_bus(DEVICE(&s->soc), "ssi-2");
+    dev = ssi_create_slave((SSIBus *) bus, "ssi-sd");
     object_property_set_bool(OBJECT(dev), true, "realized", &error_fatal);
 
     if (machine->kernel_filename) {
