@@ -318,6 +318,17 @@ static void create_fdt(SiFiveUState *s, const struct MemmapEntry *memmap,
     qemu_fdt_setprop_cell(fdt, nodename, "#size-cells", 0);
     g_free(nodename);
 
+    nodename = g_strdup_printf("/soc/spi@%lx/flash@0",
+        (long)memmap[SIFIVE_U_SPI0].base);
+    qemu_fdt_add_subnode(fdt, nodename);
+    qemu_fdt_setprop_string(fdt, nodename, "compatible", "jedec,spi-nor");
+    qemu_fdt_setprop_cells(fdt, nodename, "reg", 0x0);
+    qemu_fdt_setprop_cells(fdt, nodename, "spi-max-frequency", 0x2faf080);
+    qemu_fdt_setprop_cells(fdt, nodename, "m25p,fast-read");
+    qemu_fdt_setprop_cells(fdt, nodename, "spi-tx-bus-width", 0x4);
+    qemu_fdt_setprop_cells(fdt, nodename, "spi-rx-bus-width", 0x4);
+    g_free(nodename);
+
     nodename = g_strdup_printf("/soc/spi@%lx",
         (long)memmap[SIFIVE_U_SPI1].base);
     qemu_fdt_add_subnode(fdt, nodename);
@@ -381,6 +392,8 @@ static void riscv_sifive_u_init(MachineState *machine)
     MemoryRegion *main_mem = g_new(MemoryRegion, 1);
     MemoryRegion *flash0 = g_new(MemoryRegion, 1);
     target_ulong start_addr = memmap[SIFIVE_U_DRAM].base;
+    BusState *bus;
+    DeviceState *dev;
     int i;
 
     /* Initialize SoC */
@@ -407,6 +420,11 @@ static void riscv_sifive_u_init(MachineState *machine)
 
     riscv_find_and_load_firmware(machine, BIOS_FILENAME,
                                  memmap[SIFIVE_U_DRAM].base);
+
+    /* Create the SPI Flash */
+    bus = qdev_get_child_bus(DEVICE(&s->soc), "ssi-0");
+    dev = ssi_create_slave((SSIBus *) bus, "m25p80");
+    object_property_set_bool(OBJECT(dev), true, "realized", &error_fatal);
 
     if (machine->kernel_filename) {
         uint64_t kernel_entry = riscv_load_kernel(machine->kernel_filename,
