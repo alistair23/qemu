@@ -236,7 +236,7 @@ static void create_fdt(SiFiveUState *s, const struct MemmapEntry *memmap,
         }
         g_free(nodename);
     }
-    nodename = g_strdup_printf("/soc/interrupt-controller@%lx",
+    nodename = g_strdup_printf("/interrupt-controller@%lx",
         (long)memmap[SIFIVE_U_PLIC].base);
     qemu_fdt_add_subnode(fdt, nodename);
     qemu_fdt_setprop_cell(fdt, nodename, "#interrupt-cells", 1);
