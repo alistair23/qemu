@@ -28,8 +28,7 @@
 #include "hw/arm/boot.h"
 #include "exec/address-spaces.h"
 #include "hw/arm/stm32f205_soc.h"
-#include "hw/qdev-properties.h"
-#include "sysemu/sysemu.h"
+#include "hw/misc/unimp.h"
 
 /* At the moment only Timer 2 to 5 are modelled */
 static const uint32_t timer_addr[STM_NUM_TIMERS] = { 0x40000000, 0x40000400,
@@ -195,6 +194,48 @@ static void stm32f205_soc_realize(DeviceState *dev_soc, Error **errp)
         sysbus_mmio_map(busdev, 0, spi_addr[i]);
         sysbus_connect_irq(busdev, 0, qdev_get_gpio_in(armv7m, spi_irq[i]));
     }
+
+    create_unimplemented_device("timer[6]",    0x40001000, 0x400);
+    create_unimplemented_device("timer[7]",    0x40001400, 0x400);
+    create_unimplemented_device("timer[12]",   0x40001800, 0x400);
+    create_unimplemented_device("timer[13]",   0x40001C00, 0x400);
+    create_unimplemented_device("timer[14]",   0x40002000, 0x400);
+    create_unimplemented_device("RTC and BKP", 0x40002800, 0x400);
+    create_unimplemented_device("WWDG",        0x40002C00, 0x400);
+    create_unimplemented_device("IWDG",        0x40003000, 0x400);
+    create_unimplemented_device("I2C1",        0x40005400, 0x400);
+    create_unimplemented_device("I2C2",        0x40005800, 0x400);
+    create_unimplemented_device("I2C3",        0x40005C00, 0x400);
+    create_unimplemented_device("BxCAN1",      0x40006400, 0x400);
+    create_unimplemented_device("BxCAN2",      0x40006800, 0x400);
+    create_unimplemented_device("PWR",         0x40007000, 0x400);
+    create_unimplemented_device("DAC1/DAC2",   0x40007400, 0x400);
+    create_unimplemented_device("TIM1/PWM1",   0x40010000, 0x400);
+    create_unimplemented_device("TIM8/PWM2",   0x40010400, 0x400);
+    create_unimplemented_device("SDIO",        0x40012C00, 0x400);
+    create_unimplemented_device("TIM9",        0x40014000, 0x400);
+    create_unimplemented_device("TIM10",       0x40014400, 0x400);
+    create_unimplemented_device("TIM11",       0x40014800, 0x400);
+    create_unimplemented_device("GPIOA",       0x40020000, 0x400);
+    create_unimplemented_device("GPIOB",       0x40020400, 0x400);
+    create_unimplemented_device("GPIOC",       0x40020800, 0x400);
+    create_unimplemented_device("GPIOD",       0x40020C00, 0x400);
+    create_unimplemented_device("GPIOE",       0x40021000, 0x400);
+    create_unimplemented_device("GPIOF",       0x40021400, 0x400);
+    create_unimplemented_device("GPIOG",       0x40021800, 0x400);
+    create_unimplemented_device("GPIOH",       0x40021C00, 0x400);
+    create_unimplemented_device("GPIOI",       0x40022000, 0x400);
+    create_unimplemented_device("CRC",         0x40023000, 0x400);
+    create_unimplemented_device("RCC",         0x40023800, 0x400);
+    create_unimplemented_device("Flash Int",   0x40023C00, 0x400);
+    create_unimplemented_device("BKPSRAM",     0x40024000, 0x400);
+    create_unimplemented_device("DMA1",        0x40026000, 0x400);
+    create_unimplemented_device("DMA2",        0x40026400, 0x400);
+    create_unimplemented_device("Ethernet",    0x40028000, 0x400);
+    create_unimplemented_device("USB OTG HS",  0x40040000, 0x400);
+    create_unimplemented_device("USB OTG FS",  0x50000000, 0x400);
+    create_unimplemented_device("DCMI",        0x50050000, 0x400);
+    create_unimplemented_device("RNG",         0x50060800, 0x400);
 }
 
 static Property stm32f205_soc_properties[] = {
