@@ -26,6 +26,7 @@
 #include "hw/gpio/sifive_gpio.h"
 #include "hw/misc/sifive_u_otp.h"
 #include "hw/misc/sifive_u_prci.h"
+#include "hw/timer/sifive_u_pwm.h"
 
 #define TYPE_RISCV_U_SOC "riscv.sifive.u.soc"
 #define RISCV_U_SOC(obj) \
@@ -46,6 +47,7 @@ typedef struct SiFiveUSoCState {
     SiFiveUOTPState otp;
     SiFivePDMAState dma;
     CadenceGEMState gem;
+    SiFiveUPwmState pwm[2];
 
     uint32_t serial;
     char *cpu_type;
@@ -87,7 +89,9 @@ enum {
     SIFIVE_U_DEV_FLASH0,
     SIFIVE_U_DEV_DRAM,
     SIFIVE_U_DEV_GEM,
-    SIFIVE_U_DEV_GEM_MGMT
+    SIFIVE_U_DEV_GEM_MGMT,
+    SIFIVE_U_DEV_PWM0,
+    SIFIVE_U_DEV_PWM1
 };
 
 enum {
@@ -120,6 +124,14 @@ enum {
     SIFIVE_U_PDMA_IRQ5 = 28,
     SIFIVE_U_PDMA_IRQ6 = 29,
     SIFIVE_U_PDMA_IRQ7 = 30,
+    SIFIVE_U_DEV_PWM0_0 = 42,
+    SIFIVE_U_DEV_PWM0_1 = 43,
+    SIFIVE_U_DEV_PWM0_2 = 44,
+    SIFIVE_U_DEV_PWM0_3 = 45,
+    SIFIVE_U_DEV_PWM1_0 = 46,
+    SIFIVE_U_DEV_PWM1_1 = 47,
+    SIFIVE_U_DEV_PWM1_2 = 48,
+    SIFIVE_U_DEV_PWM1_3 = 49,
     SIFIVE_U_GEM_IRQ = 0x35
 };
 
