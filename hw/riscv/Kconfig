@@ -55,6 +55,7 @@ config SIFIVE_U
     select SIFIVE_UART
     select SIFIVE_U_OTP
     select SIFIVE_U_PRCI
+    select SIFIVE_U_PWM
     select UNIMP
 
 config SPIKE
