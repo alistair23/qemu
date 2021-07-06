@@ -116,6 +116,7 @@ static void lowrisc_ibex_soc_realize(DeviceState *dev_soc, Error **errp)
     MachineState *ms = MACHINE(qdev_get_machine());
     LowRISCIbexSoCState *s = RISCV_IBEX_SOC(dev_soc);
     MemoryRegion *sys_mem = get_system_memory();
+    int i;
 
     object_property_set_str(OBJECT(&s->cpus), "cpu-type", ms->cpu_type,
                             &error_abort);
@@ -141,6 +142,13 @@ static void lowrisc_ibex_soc_realize(DeviceState *dev_soc, Error **errp)
         return;
     }
     sysbus_mmio_map(SYS_BUS_DEVICE(&s->plic), 0, memmap[IBEX_DEV_PLIC].base);
+
+    for (i = 0; i < ms->smp.cpus; i++) {
+        CPUState *cpu = qemu_get_cpu(i);
+
+        qdev_connect_gpio_out_named(DEVICE(&s->plic), NULL, 0,
+                                    qdev_get_gpio_in(DEVICE(cpu), IRQ_M_EXT));
+    }
 
     /* UART */
     qdev_prop_set_chr(DEVICE(&(s->uart)), "chardev", serial_hd(0));
