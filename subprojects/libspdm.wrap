@@ -1,0 +1,4 @@
+[wrap-git]
+url = https://github.com/DMTF/libspdm.git
+revision = 214608ae877b6bf125da76bdbcf5a2a0b0918568
+depth = 1

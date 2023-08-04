@@ -1976,6 +1976,15 @@ elif get_option('vduse_blk_export').disabled()
     have_vduse_blk_export = false
 endif
 
+have_libspdm = (host_os == 'linux')
+if get_option('libspdm').enabled()
+    if host_os != 'linux'
+        error('libspdm requires linux')
+    endif
+elif get_option('libspdm').disabled()
+    have_libspdm = false
+endif
+
 # libbpf
 libbpf = dependency('libbpf', required: get_option('bpf'), method: 'pkg-config')
 if libbpf.found() and not cc.links('''
@@ -2245,6 +2254,7 @@ config_host_data.set('CONFIG_VHOST_VDPA', have_vhost_vdpa)
 config_host_data.set('CONFIG_VMNET', vmnet.found())
 config_host_data.set('CONFIG_VHOST_USER_BLK_SERVER', have_vhost_user_blk_server)
 config_host_data.set('CONFIG_VDUSE_BLK_EXPORT', have_vduse_blk_export)
+config_host_data.set('CONFIG_LIBSPDM', have_libspdm)
 config_host_data.set('CONFIG_PNG', png.found())
 config_host_data.set('CONFIG_VNC', vnc.found())
 config_host_data.set('CONFIG_VNC_JPEG', jpeg.found())
@@ -3381,6 +3391,7 @@ common_ss = ss.source_set()
 crypto_ss = ss.source_set()
 hwcore_ss = ss.source_set()
 io_ss = ss.source_set()
+libspdm_ss = ss.source_set()
 qmp_ss = ss.source_set()
 qom_ss = ss.source_set()
 system_ss = ss.source_set()
@@ -3401,6 +3412,71 @@ hw_arch = {}
 target_arch = {}
 target_system_arch = {}
 target_user_arch = {}
+
+libspdm = not_found
+if have_libspdm
+  cmake = import('cmake')
+  libspdm_opt_var = cmake.subproject_options()
+
+  if cpu == 'x86_64'
+    libspdm_opt_var.add_cmake_defines({'ARCH': 'x64'})
+  elif cpu == 'x86_64'
+    libspdm_opt_var.add_cmake_defines({'ARCH': 'ia32'})
+  elif cpu == 'aarch64'
+    libspdm_opt_var.add_cmake_defines({'ARCH': 'aarch64'})
+  elif cpu == 'arm'
+    libspdm_opt_var.add_cmake_defines({'ARCH': 'arm'})
+  elif cpu in ['riscv64']
+    libspdm_opt_var.add_cmake_defines({'ARCH': 'riscv64'})
+  elif cpu in ['riscv32']
+    libspdm_opt_var.add_cmake_defines({'ARCH': 'riscv32'})
+  else
+    error('Unsupported architecture for libspdm')
+  endif
+
+  libspdm_opt_var.add_cmake_defines({'TOOLCHAIN': 'NONE'})
+  libspdm_opt_var.add_cmake_defines({'TARGET': 'Release'})
+  libspdm_opt_var.add_cmake_defines({'CRYPTO': 'openssl'})
+  libspdm_opt_var.add_cmake_defines({'ENABLE_BINARY_BUILD': '1'})
+  libspdm_opt_var.add_cmake_defines({'COMPILED_LIBCRYPTO_PATH': '/usr/lib'})
+  libspdm_opt_var.add_cmake_defines({'COMPILED_LIBSSL_PATH': '/usr/lib'})
+  libspdm_opt_var.add_cmake_defines({'DISABLE_TESTS': '1'})
+
+  libspdm_proj = cmake.subproject('libspdm', options: libspdm_opt_var)
+
+  libspdm_lib = libspdm_proj.dependency('spdm_common_lib')
+  libspdm_ss.add(libspdm_lib)
+
+  libspdm_lib = libspdm_proj.dependency('memlib')
+  libspdm_ss.add(libspdm_lib)
+
+  libspdm_lib = libspdm_proj.dependency('malloclib')
+  libspdm_ss.add(libspdm_lib)
+
+  libspdm_lib = libspdm_proj.dependency('spdm_crypt_lib')
+  libspdm_ss.add(libspdm_lib)
+
+  libspdm_lib = libspdm_proj.dependency('spdm_responder_lib')
+  libspdm_ss.add(libspdm_lib)
+
+  libspdm_lib = libspdm_proj.dependency('cryptlib_openssl')
+  libspdm_ss.add(libspdm_lib)
+
+  libspdm_lib = libspdm_proj.dependency('spdm_device_secret_lib_null')
+  libspdm_ss.add(libspdm_lib)
+
+  libspdm_lib = libspdm_proj.dependency('platform_lib_null')
+  libspdm_ss.add(libspdm_lib)
+
+  libspdm_lib = libspdm_proj.dependency('spdm_secured_message_lib')
+  libspdm_ss.add(libspdm_lib)
+
+  libspdm_lib = libspdm_proj.dependency('spdm_crypt_lib')
+  libspdm_ss.add(libspdm_lib)
+
+  libspdm_lib = libspdm_proj.dependency('spdm_crypt_ext_lib')
+  libspdm_ss.add(libspdm_lib)
+endif
 
 # NOTE: the trace/ subdirectory needs the qapi_trace_events variable
 # that is filled in by qapi/.
@@ -3681,6 +3757,20 @@ crypto = declare_dependency(link_whole: libcrypto,
                             dependencies: [authz, qom])
 
 io_ss = io_ss.apply({})
+
+if have_libspdm
+  libspdm_ss = libspdm_ss.apply({})
+  libspdm = static_library('libspdm', libspdm_ss.sources() + genh,
+                             dependencies: [libspdm_ss.dependencies()],
+                             name_suffix: 'fa',
+                             build_by_default: false)
+
+  openssl = dependency('openssl', version : '>=3.0.9')
+  libspdm = declare_dependency(link_whole: libspdm, dependencies: [openssl])
+
+  common_user_inc += 'subprojects/libspdm/include'
+endif
+
 libio = static_library('io', io_ss.sources() + genh,
                        dependencies: [io_ss.dependencies()],
                        link_with: libqemuutil,
@@ -3753,6 +3843,10 @@ foreach m : block_mods + system_mods
 endforeach
 if emulator_modules.length() > 0
   alias_target('modules', emulator_modules)
+endif
+
+if have_libspdm
+  system_ss.add(libspdm)
 endif
 
 system_ss.add(authz, blockdev, chardev, crypto, io, qmp)
