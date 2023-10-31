@@ -176,6 +176,7 @@ static void ibex_spi_host_irq(IbexSPIHostState *s)
     uint32_t err_status_reg = s->regs[IBEX_SPI_HOST_ERROR_STATUS];
     uint32_t status_reg = s->regs[IBEX_SPI_HOST_STATUS];
 
+    fprintf(stderr, "%s\n", __func__);
 
     bool error_en = FIELD_EX32(intr_en_reg, INTR_ENABLE, ERROR);
     bool event_en = FIELD_EX32(intr_en_reg, INTR_ENABLE, SPI_EVENT);
@@ -183,6 +184,9 @@ static void ibex_spi_host_irq(IbexSPIHostState *s)
     bool status_pending = FIELD_EX32(intr_state_reg, INTR_STATE, SPI_EVENT);
 
     int err_irq = 0, event_irq = 0;
+
+    fprintf(stderr, "%s: error_en: %d\n", __func__, error_en);
+    fprintf(stderr, "%s: err_pending: %d\n", __func__, err_pending);
 
     /* Error IRQ enabled and Error IRQ Cleared */
     if (error_en && !err_pending) {
@@ -205,32 +209,44 @@ static void ibex_spi_host_irq(IbexSPIHostState *s)
         if (err_irq) {
             s->regs[IBEX_SPI_HOST_INTR_STATE] |= R_INTR_STATE_ERROR_MASK;
         }
-        qemu_set_irq(s->host_err, err_irq);
     }
+
+    qemu_set_irq(s->host_err, err_irq);
+
+    fprintf(stderr, "%s: event_en: %d\n", __func__, event_en);
+    fprintf(stderr, "%s: status_pending: %d\n", __func__, status_pending);
 
     /* Event IRQ Enabled and Event IRQ Cleared */
     if (event_en && !status_pending) {
+        fprintf(stderr, "%s: event_en_reg: 0x%x\n", __func__, event_en_reg);
+        fprintf(stderr, "%s: status_reg: 0x%x\n", __func__, status_reg);
+
         if (FIELD_EX32(intr_test_reg, INTR_STATE,  SPI_EVENT)) {
             /* Event enabled, Interrupt Test Event */
+            fprintf(stderr, "%s: Event enabled, Interrupt Test Event\n", __func__);
             event_irq = 1;
         } else if (FIELD_EX32(event_en_reg, EVENT_ENABLE,  READY) &&
                    FIELD_EX32(status_reg, STATUS, READY)) {
+            fprintf(stderr, "%s: SPI Host ready for next command\n", __func__);
             /* SPI Host ready for next command */
             event_irq = 1;
         } else if (FIELD_EX32(event_en_reg, EVENT_ENABLE,  TXEMPTY) &&
                    FIELD_EX32(status_reg, STATUS,  TXEMPTY)) {
+            fprintf(stderr, "%s: SPI TXEMPTY, TXFIFO drained\n", __func__);
             /* SPI TXEMPTY, TXFIFO drained */
             event_irq = 1;
         } else if (FIELD_EX32(event_en_reg, EVENT_ENABLE,  RXFULL) &&
                    FIELD_EX32(status_reg, STATUS,  RXFULL)) {
+            fprintf(stderr, "%s: SPI RXFULL, RXFIFO  full\n", __func__);
             /* SPI RXFULL, RXFIFO  full */
             event_irq = 1;
         }
         if (event_irq) {
             s->regs[IBEX_SPI_HOST_INTR_STATE] |= R_INTR_STATE_SPI_EVENT_MASK;
         }
-        qemu_set_irq(s->event, event_irq);
     }
+
+    qemu_set_irq(s->event, event_irq);
 }
 
 static void ibex_spi_host_transfer(IbexSPIHostState *s)
