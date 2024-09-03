@@ -3425,6 +3425,7 @@ if have_system
     'hw/pci-host',
     'hw/ppc',
     'hw/rtc',
+    'hw/riscv',
     'hw/s390x',
     'hw/scsi',
     'hw/sd',
