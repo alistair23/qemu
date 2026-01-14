@@ -70,6 +70,9 @@ int error_vprintf(const char *fmt, va_list ap)
     return error_vprintf_mon(monitor_cur(), fmt, ap);
 }
 
+/*
+ * Print to the current HMP monitor if we have one, else to stderr.
+ */
 int error_printf(const char *fmt, ...)
 {
     va_list ap;
