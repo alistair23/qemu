@@ -423,7 +423,6 @@ F: tests/tcg/sparc64/
 X86 TCG CPUs
 M: Paolo Bonzini <pbonzini@redhat.com>
 M: Richard Henderson <richard.henderson@linaro.org>
-M: Eduardo Habkost <eduardo@habkost.net>
 S: Maintained
 F: target/i386/tcg/
 F: tests/tcg/i386/
@@ -431,7 +430,6 @@ F: tests/tcg/x86_64/
 F: hw/i386/
 F: docs/system/i386/cpu.rst
 F: docs/system/cpu-models-x86*
-T: git https://gitlab.com/ehabkost/qemu.git x86-next
 
 Xtensa TCG CPUs
 M: Max Filippov <jcmvbkbc@gmail.com>
@@ -554,7 +552,6 @@ F: target/arm/hvf/
 F: target/arm/hvf-stub.c
 
 X86 HVF CPUs
-M: Cameron Esfahani <dirty@apple.com>
 M: Roman Bolshakov <rbolshakov@ddn.com>
 R: Phil Dennis-Jordan <phil@philjordan.eu>
 W: https://wiki.qemu.org/Features/HVF
@@ -562,7 +559,6 @@ S: Maintained
 F: target/i386/hvf/
 
 HVF
-M: Cameron Esfahani <dirty@apple.com>
 M: Roman Bolshakov <rbolshakov@ddn.com>
 R: Phil Dennis-Jordan <phil@philjordan.eu>
 W: https://wiki.qemu.org/Features/HVF
@@ -608,7 +604,6 @@ S: Supported
 F: target/i386/mshv/
 
 X86 Instruction Emulator
-M: Cameron Esfahani <dirty@apple.com>
 M: Roman Bolshakov <rbolshakov@ddn.com>
 R: Phil Dennis-Jordan <phil@philjordan.eu>
 R: Wei Liu <wei.liu@kernel.org>
@@ -909,7 +904,6 @@ F: docs/system/arm/mcimx6ul-evk.rst
 
 MCIMX7D SABRE / i.MX7
 M: Peter Maydell <peter.maydell@linaro.org>
-R: Andrey Smirnov <andrew.smirnov@gmail.com>
 L: qemu-arm@nongnu.org
 S: Odd Fixes
 F: hw/arm/mcimx7d-sabre.c
@@ -1042,7 +1036,6 @@ F: include/hw/misc/imx6_*.h
 F: include/hw/ssi/imx_spi.h
 
 SBSA-REF
-M: Radoslaw Biernacki <rad@semihalf.com>
 M: Peter Maydell <peter.maydell@linaro.org>
 R: Leif Lindholm <leif.lindholm@oss.qualcomm.com>
 L: qemu-arm@nongnu.org
@@ -2019,7 +2012,6 @@ F: include/hw/i386/nitro_enclave.h
 F: docs/system/i386/nitro-enclave.rst
 
 Machine core
-M: Eduardo Habkost <eduardo@habkost.net>
 M: Marcel Apfelbaum <marcel.apfelbaum@gmail.com>
 R: Philippe Mathieu-Daudé <philmd@linaro.org>
 R: Yanan Wang <wangyanan55@huawei.com>
@@ -2042,7 +2034,6 @@ F: include/system/numa.h
 F: tests/functional/x86_64/test_cpu_queries.py
 F: tests/functional/generic/test_empty_cpu_model.py
 F: tests/unit/test-smp-parse.c
-T: git https://gitlab.com/ehabkost/qemu.git machine-next
 
 TargetInfo API
 M: Pierrick Bouvier <pierrick.bouvier@linaro.org>
@@ -2170,7 +2161,6 @@ F: docs/system/sriov.rst
 
 PCIE DOE
 M: Huai-Cheng Kuo <hchkuo@avery-design.com.tw>
-M: Chris Browy <cbrowy@avery-design.com>
 S: Supported
 F: include/hw/pci/pcie_doe.h
 F: hw/pci/pcie_doe.c
@@ -2637,9 +2627,8 @@ F: include/block/ufs.h
 F: tests/qtest/ufs-test.c
 
 megasas
-M: Hannes Reinecke <hare@suse.com>
 L: qemu-block@nongnu.org
-S: Supported
+S: Orphan
 F: hw/scsi/megasas.c
 F: hw/scsi/mfi.h
 F: tests/qtest/megasas-test.c
@@ -3451,7 +3440,6 @@ S: Maintained
 F: backends/hostmem*.c
 F: include/system/hostmem.h
 F: docs/system/vm-templating.rst
-T: git https://gitlab.com/ehabkost/qemu.git machine-next
 
 Cryptodev Backends
 M: Gonglei <arei.gonglei@huawei.com>
@@ -3554,7 +3542,6 @@ T: git https://github.com/kostyanf14/qemu.git qga-win32
 QOM
 M: Paolo Bonzini <pbonzini@redhat.com>
 R: Daniel P. Berrange <berrange@redhat.com>
-R: Eduardo Habkost <eduardo@habkost.net>
 S: Supported
 F: docs/devel/qom.rst
 F: docs/qdev-device-use.txt
@@ -3577,8 +3564,7 @@ F: tests/unit/test-qdev-global-props.c
 F: tests/qtest/qom-test.c
 
 QOM boilerplate conversion script
-M: Eduardo Habkost <eduardo@habkost.net>
-S: Maintained
+S: Orphan
 F: scripts/codeconverter/
 
 QMP
