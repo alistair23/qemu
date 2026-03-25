@@ -3533,6 +3533,7 @@ F: qapi/qom.json
 F: scripts/coccinelle/qom-parent-type.cocci
 F: scripts/qom-cast-macro-clean-cocci-gen.py
 F: qom/
+F: stubs/qom-compat-properties.c
 F: tests/unit/check-qom-interface.c
 F: tests/unit/check-qom-proplist.c
 F: tests/qtest/qom-test.c
