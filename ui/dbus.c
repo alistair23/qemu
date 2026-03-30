@@ -145,8 +145,7 @@ dbus_display_finalize(Object *o)
         dbus_display_notifier_remove(&dd->notifier);
     }
 
-    qemu_clipboard_peer_unregister(&dd->clipboard_peer);
-    g_clear_object(&dd->clipboard);
+    dbus_clipboard_fini(dd);
 
     g_clear_object(&dd->server);
     g_clear_pointer(&dd->consoles, g_ptr_array_unref);
