@@ -447,8 +447,7 @@ F: include/hw/xtensa/xtensa-isa.h
 F: configs/devices/xtensa*/default.mak
 
 TriCore TCG CPUs
-M: Bastian Koppelmann <kbastian@rumtueddeln.de>
-S: Odd Fixes
+S: Orphan
 F: target/tricore/
 F: hw/tricore/
 F: include/hw/tricore/
@@ -672,7 +671,6 @@ F: include/qemu/*posix*.h
 
 NETBSD
 M: Reinoud Zandijk <reinoud@netbsd.org>
-M: Ryo ONODERA <ryoon@netbsd.org>
 S: Maintained
 K: ^Subject:.*(?i)NetBSD
 
@@ -720,7 +718,6 @@ F: tests/functional/alpha/test_clipper.py
 ARM Machines
 ------------
 Allwinner-a10
-M: Beniamino Galvani <b.galvani@gmail.com>
 M: Peter Maydell <peter.maydell@linaro.org>
 R: Strahinja Jankovic <strahinja.p.jankovic@gmail.com>
 L: qemu-arm@nongnu.org
@@ -842,7 +839,6 @@ F: tests/functional/arm/test_canona1100.py
 F: docs/system/arm/digic.rst
 
 Goldfish RTC
-M: Anup Patel <anup.patel@wdc.com>
 M: Alistair Francis <Alistair.Francis@wdc.com>
 L: qemu-riscv@nongnu.org
 S: Maintained
@@ -1490,7 +1486,6 @@ F: include/hw/intc/loongson_liointc.h
 F: tests/functional/mips64el/test_loongson3v.py
 
 Boston
-M: Paul Burton <paulburton@kernel.org>
 R: Aleksandar Rikalo <arikalo@gmail.com>
 S: Odd Fixes
 F: hw/core/loader-fit.c
@@ -1501,8 +1496,7 @@ F: include/hw/pci-host/xilinx-pcie.h
 OpenRISC Machines
 -----------------
 or1k-sim
-M: Jia Liu <proljc@gmail.com>
-S: Maintained
+S: Orphan
 F: docs/system/or1k/or1k-sim.rst
 F: hw/intc/ompic.c
 F: hw/or1k/or1k-sim.c
@@ -1739,9 +1733,8 @@ F: include/hw/misc/mchp_pfsoc_ioscb.h
 F: include/hw/misc/mchp_pfsoc_sysreg.h
 
 Shakti C class SoC
-M: Vijai Kumar K <vijai@behindbytes.com>
 L: qemu-riscv@nongnu.org
-S: Supported
+S: Orphan
 F: docs/system/riscv/shakti-c.rst
 F: hw/riscv/shakti_c.c
 F: hw/char/shakti_uart.c
@@ -1784,7 +1777,6 @@ SH4 Machines
 ------------
 R2D
 R: Yoshinori Sato <yoshinori.sato@nifty.com>
-R: Magnus Damm <magnus.damm@gmail.com>
 S: Odd Fixes
 F: hw/char/sh_serial.c
 F: hw/sh4/r2d.c
@@ -1932,7 +1924,6 @@ X86 Machines
 ------------
 PC
 M: Michael S. Tsirkin <mst@redhat.com>
-M: Marcel Apfelbaum <marcel.apfelbaum@gmail.com>
 S: Supported
 F: include/hw/i386/
 F: hw/i386/
@@ -2015,9 +2006,7 @@ F: include/hw/i386/nitro_enclave.h
 F: docs/system/i386/nitro-enclave.rst
 
 Machine core
-M: Marcel Apfelbaum <marcel.apfelbaum@gmail.com>
 R: Philippe Mathieu-Daudé <philmd@linaro.org>
-R: Yanan Wang <wangyanan55@huawei.com>
 R: Zhao Liu <zhao1.liu@intel.com>
 S: Supported
 F: hw/core/cpu-common.c
@@ -2151,7 +2140,6 @@ F: hw/ipack/
 
 PCI
 M: Michael S. Tsirkin <mst@redhat.com>
-M: Marcel Apfelbaum <marcel.apfelbaum@gmail.com>
 S: Supported
 F: include/hw/pci/*
 F: hw/misc/pci-testdev.c
@@ -2163,8 +2151,7 @@ F: docs/specs/*pci*
 F: docs/system/sriov.rst
 
 PCIE DOE
-M: Huai-Cheng Kuo <hchkuo@avery-design.com.tw>
-S: Supported
+S: Orphan
 F: include/hw/pci/pcie_doe.h
 F: hw/pci/pcie_doe.c
 
@@ -2196,9 +2183,8 @@ F: docs/specs/acpi_pci_hotplug.rst
 F: docs/specs/acpi_hw_reduced_hotplug.rst
 
 ARM ACPI Subsystem
-M: Shannon Zhao <shannon.zhaosl@gmail.com>
 L: qemu-arm@nongnu.org
-S: Maintained
+S: Orphan
 F: hw/arm/virt-acpi-build.c
 
 RISC-V ACPI Subsystem
@@ -2222,9 +2208,8 @@ F: tests/functional/x86_64/test_acpi_bits.py
 F: docs/devel/testing/acpi-bits.rst
 
 ACPI/HEST/GHES
-R: Dongjiu Geng <gengdongjiu1@gmail.com>
 L: qemu-arm@nongnu.org
-S: Maintained
+S: Orphan
 F: hw/acpi/ghes.c
 F: include/hw/acpi/ghes.h
 F: docs/specs/acpi_hest_ghes.rst
@@ -2730,8 +2715,7 @@ F: docs/system/guest-loader.rst
 F: tests/functional/aarch64/test_xen.py
 
 Intel Hexadecimal Object File Loader
-M: Su Hang <suhang16@mails.ucas.ac.cn>
-S: Maintained
+S: Orphan
 F: tests/qtest/hexloader-test.c
 F: tests/data/hex-loader/test.hex
 
@@ -2885,7 +2869,6 @@ F: docs/*/*xive*
 
 Renesas peripherals
 R: Yoshinori Sato <yoshinori.sato@nifty.com>
-R: Magnus Damm <magnus.damm@gmail.com>
 S: Odd Fixes
 F: hw/char/renesas_sci.c
 F: hw/char/sh_serial.c
@@ -3336,7 +3319,6 @@ F: scripts/coccinelle/memory-region-housekeeping.cocci
 Memory devices
 M: David Hildenbrand <david@kernel.org>
 M: Igor Mammedov <imammedo@redhat.com>
-R: Xiao Guangrong <xiaoguangrong.eric@gmail.com>
 S: Supported
 F: hw/mem/memory-device*.c
 F: hw/mem/nvdimm.c
@@ -3425,7 +3407,6 @@ T: git https://github.com/jasowang/qemu.git net
 F: qapi/net.json
 
 Netmap network backend
-M: Luigi Rizzo <rizzo@iet.unipi.it>
 M: Giuseppe Lettieri <g.lettieri@iet.unipi.it>
 M: Vincenzo Maffione <v.maffione@gmail.com>
 W: http://info.iet.unipi.it/~luigi/netmap/
@@ -3619,7 +3600,6 @@ R: Paolo Bonzini <pbonzini@redhat.com>
 R: Stefan Hajnoczi <stefanha@redhat.com>
 R: Fabiano Rosas <farosas@suse.de>
 R: Darren Kenny <darren.kenny@oracle.com> 
-R: Qiuhao Li <Qiuhao.Li@outlook.com>
 S: Maintained
 F: tests/qtest/fuzz/
 F: tests/qtest/fuzz-*test.c
@@ -4037,7 +4017,6 @@ F: .gitlab-ci.d/opensbi/
 
 Clock framework
 M: Luc Michel <luc@lmichel.fr>
-R: Damien Hedde <damien.hedde@dahe.fr>
 S: Maintained
 F: include/hw/core/clock.h
 F: include/hw/core/qdev-clock.h
@@ -4098,7 +4077,6 @@ M: Alex Bennée <alex.bennee@linaro.org>
 M: Pierrick Bouvier <pierrick.bouvier@oss.qualcomm.com>
 T: git https://gitlab.com/stsquad/qemu plugins/next
 R: Alexandre Iooss <erdnaxe@crans.org>
-R: Mahmoud Mandour <ma.mandourr@gmail.com>
 S: Maintained
 F: docs/devel/tcg-plugins.rst
 F: plugins/
@@ -4181,9 +4159,8 @@ S: Supported
 F: block/rbd.c
 
 VHDX
-M: Jeff Cody <codyprime@gmail.com>
 L: qemu-block@nongnu.org
-S: Odd Fixes
+S: Orphan
 F: block/vhdx*
 
 VDI
@@ -4199,7 +4176,6 @@ S: Maintained
 F: block/blkio.c
 
 iSCSI
-M: Ronnie Sahlberg <ronniesahlberg@gmail.com>
 M: Paolo Bonzini <pbonzini@redhat.com>
 M: Peter Lieven <pl@dlhnet.de>
 L: qemu-block@nongnu.org
@@ -4334,7 +4310,6 @@ F: block/file-win32.c
 F: block/win32-aio.c
 
 Linux io_uring
-M: Aarushi Mehta <mehta.aaru20@gmail.com>
 M: Julia Suvorova <jusual@redhat.com>
 M: Stefan Hajnoczi <stefanha@redhat.com>
 R: Stefano Garzarella <sgarzare@redhat.com>
@@ -4384,8 +4359,7 @@ S: Supported
 F: tests/image-fuzzer/
 
 Vhost-user block device backend server
-M: Coiby Xu <Coiby.Xu@gmail.com>
-S: Maintained
+S: Orphan
 F: block/export/vhost-user-blk-server.c
 F: block/export/vhost-user-blk-server.h
 F: block/export/virtio-blk-handler.c
@@ -4410,9 +4384,7 @@ F: block/export/vduse-blk.c
 F: block/export/vduse-blk.h
 
 Replication
-M: Wen Congyang <wencongyang2@huawei.com>
-M: Xie Changlong <xiechanglong.d@gmail.com>
-S: Supported
+S: Orphan
 F: replication*
 F: block/replication.c
 F: tests/unit/test-replication.c
@@ -4500,7 +4472,6 @@ W: https://gitlab.com/qemu-project/qemu/pipelines
 W: https://travis-ci.org/qemu/qemu
 
 FreeBSD Hosted Continuous Integration
-M: Ed Maste <emaste@freebsd.org>
 M: Li-Wen Hsu <lwhsu@freebsd.org>
 S: Maintained
 F: .gitlab-ci.d/cirrus/freebsd*
@@ -4634,8 +4605,7 @@ F: rust/wrapper.h
 Miscellaneous
 -------------
 Performance Tools and Tests
-M: Ahmed Karaman <ahmedkhaledkaraman@gmail.com>
-S: Maintained
+S: Orphan
 F: scripts/performance/
 
 Code Coverage Tools
