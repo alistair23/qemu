@@ -1186,6 +1186,19 @@ Arm ``highbank`` and ``midway`` machines (removed in 11.0)
 There were no known users left for these machines. If you just want to
 boot a Cortex-A15 or Cortex-A9 Linux, use the ``virt`` machine instead.
 
+RISC-V default machine (removed in 11.1)
+''''''''''''''''''''''''''''''''''''''''
+
+RISC-V used to define ``spike`` as the default machine if no machine option
+was given via the command line.  This happend because ``spike`` was the first
+RISC-V machine implemented in QEMU and setting it as default was
+convenient at that time.  Now we have 7 riscv64 and 6 riscv32 machines
+and having ``spike`` as a default is no longer justified.
+
+The default machine option has been removed, forcing users to always set the
+machine they want to use to avoid confusion.  Existing users of the ``spike``
+machine must ensure that they're setting the ``spike`` machine in the
+command line (``-M spike``).
 
 linux-user mode CPUs
 --------------------
