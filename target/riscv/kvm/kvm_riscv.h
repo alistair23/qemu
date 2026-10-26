@@ -31,6 +31,7 @@ void kvm_riscv_reset_vcpu(RISCVCPU *cpu);
  * @level: %0 to clear the interrupt, non-zero to set it.
  */
 void kvm_riscv_set_irq(RISCVCPU *cpu, int irq, int level);
+void kvm_riscv_aia_access_reg(int group, uint64_t addr, void *val, bool write);
 void kvm_riscv_aia_create(const RISCVAIASocket *sockets,
                           uint32_t socket_count, uint64_t group_shift,
                           uint64_t aia_irq_num, uint64_t aia_msi_num,
