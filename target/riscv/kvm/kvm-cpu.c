@@ -2080,9 +2080,9 @@ void kvm_riscv_set_irq(RISCVCPU *cpu, int irq, int level)
     }
 }
 
-static int aia_mode;
+static uint32_t aia_mode;
 
-static const char *kvm_aia_mode_str(uint64_t mode)
+static const char *kvm_aia_mode_str(uint32_t mode)
 {
     switch (mode) {
     case KVM_DEV_RISCV_AIA_MODE_EMUL:
@@ -2138,7 +2138,7 @@ void kvm_riscv_aia_create(const RISCVAIASocket *sockets,
                           uint64_t guest_num)
 {
     int ret, i;
-    uint64_t default_aia_mode;
+    uint32_t default_aia_mode;
     uint64_t max_hart_per_socket = 0;
     uint64_t socket, base_hart, hart_count, socket_imsic_base, imsic_addr;
     uint64_t socket_bits, hart_bits, guest_bits;
